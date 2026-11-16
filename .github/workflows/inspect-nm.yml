@@ -7,9 +7,7 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view -R NiLuJe/kfmon --json tagName,publishedAt,assets -q '.tagName, .publishedAt, (.assets[]|"\(.name) \(.size)")'
-          mkdir /tmp/k && cd /tmp/k
-          gh release download -R NiLuJe/kfmon --pattern '*.zip' --dir .
-          for z in *.zip; do unzip -o "$z"; done
-          find . -type f | head -50
-          tar tzvf KoboRoot.tgz | head -50
+          gh api repos/NiLuJe/kfmon/tags -q '.[].name' | head -5 || true
+          gh api repos/koreader/koreader/releases/latest -q '.tag_name, (.assets[]|.name)' | grep -iE 'v20|kobo' | head -20 || true
+          gh api repos/koreader/koreader/releases?per_page=3 -q '.[].tag_name' || true
+          gh api repos/pgaskin/NickelMenu/releases -q '.[]|.tag_name' | head -8 || true
