@@ -14,22 +14,17 @@ mkdir bundle
 cd bundle || exit 1
 
 if gzip -tq "$NICKEL_MENU_ARCHIVE"; then
-	ln -s "$NICKEL_MENU_ARCHIVE" KoboRoot.tgz
+	cp "$NICKEL_MENU_ARCHIVE" KoboRoot.tgz
 else
 	unzip "$NICKEL_MENU_ARCHIVE" KoboRoot.tgz
 fi
 
-tar -xzvf KoboRoot.tgz
-rm KoboRoot.tgz
-mv mnt/onboard/.adds .
-rm -Rf mnt
-
+mkdir -p .adds/nm .kobo
+# keep the original NickelMenu KoboRoot.tgz byte-for-byte (repacking changed file owners)
+mv KoboRoot.tgz .kobo/KoboRoot.tgz
 mv ../dist .adds/plato
-cp ../contrib/NickelMenu/* .adds/nm
-
-mkdir .kobo
-tar -czvf .kobo/KoboRoot.tgz usr
-rm -Rf usr
+cp ../contrib/NickelMenu/* .adds/nm/
+tar -xzOf .kobo/KoboRoot.tgz ./mnt/onboard/.adds/nm/doc > .adds/nm/doc 2>/dev/null || true
 
 FIRMWARE_VERSION=$(basename "$FIRMWARE_ARCHIVE" .zip)
 FIRMWARE_VERSION=${FIRMWARE_VERSION##*-}
