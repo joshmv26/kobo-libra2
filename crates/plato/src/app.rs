@@ -26,7 +26,8 @@ use plato_core::input::{DeviceEvent, PowerSource, ButtonCode, ButtonStatus, VAL_
 use plato_core::input::{raw_events, device_events, usb_events, display_rotate_event, button_scheme_event};
 use plato_core::gesture::{GestureEvent, gesture_events};
 use plato_core::helpers::{load_toml, save_toml};
-use plato_core::settings::{ButtonScheme, Settings, SETTINGS_PATH, RotationLock, IntermKind};
+use plato_core::settings::{ButtonScheme, Settings, SETTINGS_PATH, RotationLock, IntermKind, guess_frontlight};
+use plato_core::frontlight::LightLevels;
 use plato_core::frontlight::{Frontlight, StandardFrontlight, NaturalFrontlight, PremixedFrontlight};
 use plato_core::lightsensor::{LightSensor, KoboLightSensor};
 use plato_core::battery::{Battery, KoboBattery};
@@ -335,7 +336,27 @@ pub fn run() -> Result<(), Error> {
                   BATTERY_REFRESH_INTERVAL, &tx, &mut tasks);
     tx.send(Event::WakeUp).ok();
 
+    let mut last_light: Option<LightLevels> = None;
+
     while let Ok(evt) = rx.recv() {
+        // Gradual front-light schedule: re-evaluated every minute, applied only when the target moves,
+        // so manual changes stay until the schedule changes again.
+        if let Event::ClockTick = evt {
+            if context.settings.frontlight && context.settings.light_schedule {
+                if let Some(l) = guess_frontlight(None, &context.settings.frontlight_presets) {
+                    let changed = match last_light {
+                        Some(p) => (p.intensity - l.intensity).abs() >= 0.5 || (p.warmth - l.warmth).abs() >= 0.5,
+                        None => true,
+                    };
+                    if changed {
+                        context.frontlight.set_intensity(l.intensity);
+                        context.frontlight.set_warmth(l.warmth);
+                        context.settings.frontlight_levels = l;
+                        last_light = Some(l);
+                    }
+                }
+            }
+        }
         match evt {
             Event::Device(de) => {
                 match de {

@@ -117,6 +117,7 @@ pub struct Settings {
     pub intermissions: Intermissions,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub frontlight_presets: Vec<LightPreset>,
+    pub light_schedule: bool,
     pub home: HomeSettings,
     pub reader: ReaderSettings,
     pub import: ImportSettings,
@@ -550,7 +551,19 @@ impl Default for Settings {
             calculator: CalculatorSettings::default(),
             battery: BatterySettings::default(),
             frontlight_levels: LightLevels::default(),
-            frontlight_presets: Vec::new(),
+            // Gradual evening / morning light: warm and dim down between 20:00 and 21:00,
+            // back up between 06:00 and 07:00 (circular interpolation between presets).
+            frontlight_presets: vec![
+                LightPreset { timestamp: 7 * 60, lightsensor_level: None,
+                              frontlight_levels: LightLevels { intensity: 35.0, warmth: 25.0 } },
+                LightPreset { timestamp: 20 * 60, lightsensor_level: None,
+                              frontlight_levels: LightLevels { intensity: 35.0, warmth: 25.0 } },
+                LightPreset { timestamp: 21 * 60, lightsensor_level: None,
+                              frontlight_levels: LightLevels { intensity: 12.0, warmth: 85.0 } },
+                LightPreset { timestamp: 6 * 60, lightsensor_level: None,
+                              frontlight_levels: LightLevels { intensity: 12.0, warmth: 85.0 } },
+            ],
+            light_schedule: true,
         }
     }
 }
