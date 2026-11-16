@@ -14,12 +14,24 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y wget curl git pkg-config unzip jq patchelf zip
 
-      - name: Linaro ARM toolchain (old glibc, matches Kobo firmware)
+      - name: Kobo ARM toolchain (koxtoolchain, old glibc matching Kobo firmware)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p $HOME/toolchain && cd $HOME/toolchain
-          wget -q https://releases.linaro.org/components/toolchain/binaries/4.9-2017.01/arm-linux-gnueabihf/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf.tar.xz
-          tar xf gcc-linaro-*.tar.xz
-          echo "$(echo $HOME/toolchain/gcc-linaro-*/bin)" >> $GITHUB_PATH
+          gh release view -R koreader/koxtoolchain --json tagName,assets -q '.tagName, (.assets[].name)'
+          gh release download -R koreader/koxtoolchain --pattern 'kobo*' --dir .
+          ls -la
+          for f in kobo*; do case "$f" in *.zip) unzip -q "$f";; *.tar.*|*.tgz) tar xf "$f";; esac; done
+          GCC=$(find $HOME/toolchain -name 'arm-kobo-linux-gnueabihf-gcc' -type f -o -name 'arm-kobo-linux-gnueabihf-gcc' -type l | head -1)
+          echo "gcc found: $GCC"
+          BIN=$(dirname "$GCC")
+          mkdir -p $HOME/toolchain/shim
+          for t in "$BIN"/arm-kobo-linux-gnueabihf-*; do
+            n=$(basename "$t"); ln -sf "$t" "$HOME/toolchain/shim/arm-linux-gnueabihf-${n#arm-kobo-linux-gnueabihf-}"
+          done
+          echo "$BIN" >> $GITHUB_PATH
+          echo "$HOME/toolchain/shim" >> $GITHUB_PATH
 
       - name: Rust target
         run: rustup target add arm-unknown-linux-gnueabihf
