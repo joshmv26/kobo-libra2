@@ -36,6 +36,11 @@ jobs:
       - name: Rust target
         run: rustup target add arm-unknown-linux-gnueabihf
 
+      - name: getauxval shim (old sysroot lacks it)
+        run: |
+          arm-linux-gnueabihf-gcc -c -O2 -o $HOME/getauxval.o contrib/getauxval_shim.c
+          echo "RUSTFLAGS=-C target-feature=+v7,+vfp3,+neon -C link-arg=$HOME/getauxval.o" >> $GITHUB_ENV
+
       - name: Build + dist
         run: ./dist.sh
 
