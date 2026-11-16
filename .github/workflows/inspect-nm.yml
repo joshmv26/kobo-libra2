@@ -1,0 +1,12 @@
+name: Inspect NickelMenu
+on: workflow_dispatch
+jobs:
+  inspect:
+    runs-on: ubuntu-22.04
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view -R pgaskin/NickelMenu --json tagName,publishedAt,assets -q '.tagName, .publishedAt, (.assets[]|"\(.name) \(.size)")'
+          gh release download -R pgaskin/NickelMenu --pattern 'KoboRoot.tgz' --dir /tmp
+          echo "== contents of NickelMenu KoboRoot.tgz =="; tar tzvf /tmp/KoboRoot.tgz
