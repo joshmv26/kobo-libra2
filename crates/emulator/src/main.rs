@@ -22,6 +22,7 @@ use plato_core::view::{process_render_queue, wait_for_all, handle_event, RenderQ
 use plato_core::view::home::Home;
 use plato_core::view::reader::Reader;
 use plato_core::view::notification::Notification;
+use plato_core::view::games::{Sudoku, Tetris};
 use plato_core::view::dialog::Dialog;
 use plato_core::view::frontlight::FrontlightWindow;
 use plato_core::view::menu::{Menu, MenuKind};
@@ -441,6 +442,8 @@ fn main() -> Result<(), Error> {
                         AppCmd::Calculator => {
                             Box::new(Calculator::new(context.fb.rect(), &tx, &mut rq, &mut context)?)
                         },
+                        AppCmd::Sudoku => Box::new(Sudoku::new(context.fb.rect(), &mut rq, &mut context)),
+                        AppCmd::Tetris => Box::new(Tetris::new(context.fb.rect(), &tx, &mut rq, &mut context)),
                         AppCmd::Dictionary { ref query, ref language } => {
                             Box::new(Dictionary::new(context.fb.rect(), query, language, &tx, &mut rq, &mut context))
                         },

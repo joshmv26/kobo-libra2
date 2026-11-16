@@ -40,6 +40,7 @@ pub mod reader;
 pub mod dictionary;
 pub mod calculator;
 pub mod sketch;
+pub mod games;
 pub mod touch_events;
 pub mod rotation_values;
 
@@ -344,6 +345,7 @@ pub enum Event {
     EndOfSearch,
     Finished,
     ClockTick,
+    GameTick,
     BatteryTick,
     ToggleFrontlight,
     Load(PathBuf),
@@ -370,6 +372,8 @@ pub enum Event {
 pub enum AppCmd {
     Sketch,
     Calculator,
+    Sudoku,
+    Tetris,
     Dictionary {
         query: String,
         language: String,

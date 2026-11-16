@@ -588,6 +588,12 @@ pub struct Style {
     pub size: u32,
 }
 
+impl Style {
+    pub fn with_size(&self, size: u32) -> Style {
+        Style { family: self.family, variant: self.variant, size }
+    }
+}
+
 pub fn font_from_variant(family: &mut FontFamily, variant: Variant) -> &mut Font {
     if variant.contains(Variant::ITALIC | Variant::BOLD) {
         &mut family.bold_italic

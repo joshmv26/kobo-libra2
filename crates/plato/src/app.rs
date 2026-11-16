@@ -18,6 +18,7 @@ use plato_core::view::menu::{Menu, MenuKind};
 use plato_core::view::dictionary::Dictionary as DictionaryApp;
 use plato_core::view::calculator::Calculator;
 use plato_core::view::sketch::Sketch;
+use plato_core::view::games::{Sudoku, Tetris};
 use plato_core::view::touch_events::TouchEvents;
 use plato_core::view::rotation_values::RotationValues;
 use plato_core::document::sys_info_as_html;
@@ -799,6 +800,8 @@ pub fn run() -> Result<(), Error> {
                         Box::new(Sketch::new(context.fb.rect(), &mut rq, &mut context))
                     },
                     AppCmd::Calculator => Box::new(Calculator::new(context.fb.rect(), &tx, &mut rq, &mut context)?),
+                    AppCmd::Sudoku => Box::new(Sudoku::new(context.fb.rect(), &mut rq, &mut context)),
+                    AppCmd::Tetris => Box::new(Tetris::new(context.fb.rect(), &tx, &mut rq, &mut context)),
                     AppCmd::Dictionary { ref query, ref language } => Box::new(DictionaryApp::new(context.fb.rect(), query,
                                                                                                   language, &tx, &mut rq, &mut context)),
                     AppCmd::TouchEvents => {
