@@ -7,7 +7,9 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/NiLuJe/kfmon/tags -q '.[].name' | head -5 || true
-          gh api repos/koreader/koreader/releases/latest -q '.tag_name, (.assets[]|.name)' | grep -iE 'v20|kobo' | head -20 || true
-          gh api repos/koreader/koreader/releases?per_page=3 -q '.[].tag_name' || true
-          gh api repos/pgaskin/NickelMenu/releases -q '.[]|.tag_name' | head -8 || true
+          mkdir /tmp/k && cd /tmp/k
+          gh release download -R koreader/koreader --pattern 'koreader-kobo-v*.zip' --dir .
+          unzip -l koreader-kobo-*.zip | grep -v 'koreader/' | head -40
+          unzip -o -q koreader-kobo-*.zip -d x
+          find x -maxdepth 4 -not -path 'x/koreader/*' | head -40
+          tar tzvf x/koreader/KoboRoot.tgz 2>/dev/null | head; find x -name '*.tgz' -o -name '*.ini' -o -name '*.png' | head
