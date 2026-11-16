@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -56,3 +59,12 @@ jobs:
         with:
           name: libra2-bundle
           path: bundle/*.zip
+
+      - name: Publish as a GitHub release (easy download)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" bundle/*.zip \
+            --title "Libra 2 bundle #${{ github.run_number }}" \
+            --notes "Unzip into the root of the Kobo USB drive, eject, wait for the reboot. Stock Nickel stays as fallback." \
+            --prerelease
