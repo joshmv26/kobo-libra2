@@ -51,7 +51,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download -R pgaskin/NickelMenu --pattern 'KoboRoot.tgz' --dir /tmp
+          gh release download v0.5.4 -R pgaskin/NickelMenu --pattern 'KoboRoot.tgz' --dir /tmp
           ./bundle.sh /tmp/KoboRoot.tgz
           ls -la bundle
 
