@@ -1,0 +1,3 @@
+- ePUB renderer: RTL.
+- Metadata view.
+- Applications: Notes, Terminal, Browser.

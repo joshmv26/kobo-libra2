@@ -1,0 +1,41 @@
+name: Build Libra 2 bundle
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y wget curl git pkg-config unzip jq patchelf zip
+
+      - name: Linaro ARM toolchain (old glibc, matches Kobo firmware)
+        run: |
+          mkdir -p $HOME/toolchain && cd $HOME/toolchain
+          wget -q https://releases.linaro.org/components/toolchain/binaries/4.9-2017.01/arm-linux-gnueabihf/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabihf.tar.xz
+          tar xf gcc-linaro-*.tar.xz
+          echo "$(echo $HOME/toolchain/gcc-linaro-*/bin)" >> $GITHUB_PATH
+
+      - name: Rust target
+        run: rustup target add arm-unknown-linux-gnueabihf
+
+      - name: Build + dist
+        run: ./dist.sh
+
+      - name: Bundle with NickelMenu
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download -R pgaskin/NickelMenu --pattern 'KoboRoot.tgz' --dir /tmp
+          ./bundle.sh /tmp/KoboRoot.tgz
+          ls -la bundle
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libra2-bundle
+          path: bundle/*.zip

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kobo Libra 2 – Custom System Prototype</title>
+<style>
+:root{--paper:#ebe9e1;--prgb:235,233,225;--ink:#111;--line:#111;--soft:#8a8880;--bw:2px;--font:Georgia,serif;--fs:18px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#2b2b2d;color:#ddd;font-family:system-ui,sans-serif}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden}
+#hint{font-size:12px;opacity:.7;text-align:center;padding:0 12px}
+#wrap{position:relative}
+#device{background:#1a1a1c;border-radius:34px;padding:26px;box-shadow:0 10px 40px #000a;position:relative}
+#btns{position:absolute;right:-16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:14px}
+#btns button{width:14px;height:92px;border:0;border-radius:0 8px 8px 0;background:#3a3a3d;cursor:pointer}
+#btns button:active{background:#777}
+#screen{width:632px;height:840px;background:var(--paper);color:var(--ink);font-family:var(--font);position:relative;overflow:hidden;border-radius:6px;display:flex;flex-direction:column}
+body.inv #screen{--paper:#151513;--prgb:21,21,19;--ink:#e6e4dc;--line:#e6e4dc;--soft:#8a8880}
+#status{display:flex;justify-content:space-between;padding:8px 18px;font:600 14px system-ui;border-bottom:1px solid var(--soft);background:var(--paper);z-index:2}
+#main{flex:1;overflow:hidden;position:relative;background-size:cover;background-position:center}
+#nav{display:flex;border-top:var(--bw) solid var(--line);background:var(--paper)}
+#nav button{flex:1;background:none;border:0;border-right:1px solid var(--soft);color:var(--ink);padding:9px 0 7px;font:600 10px system-ui;cursor:pointer}
+#nav button:last-child{border-right:0}
+#nav button.on{background:var(--ink);color:var(--paper)}
+#nav svg{display:block;margin:0 auto 2px}
+.pad{padding:16px 20px;height:100%;overflow:auto}
+h2{margin:0 0 6px}
+.clock{font-size:64px;font-weight:700;letter-spacing:-2px;line-height:1}
+.date{font-size:18px;margin-top:4px}
+.card{border:var(--bw) solid var(--line);border-radius:10px;padding:12px 14px;margin:14px 0;background:var(--paper)}
+.card h3{margin:0 0 6px;font:700 13px system-ui;letter-spacing:.08em;text-transform:uppercase}
+.bar{height:8px;border:1px solid var(--line);margin-top:8px}.bar i{display:block;height:100%;background:var(--ink)}
+.grid{display:grid;gap:12px;margin:14px 0}
+.tile{border:var(--bw) solid var(--line);border-radius:12px;padding:14px 6px;text-align:center;background:var(--paper);color:var(--ink);font:600 16px var(--font);cursor:pointer}
+.tile:active{background:var(--ink);color:var(--paper)}
+.ev{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--soft);font-size:16px}
+.ev b{width:60px;font-family:system-ui;font-size:14px;flex:none}
+.btn{border:var(--bw) solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:7px 12px;font:600 13px system-ui;cursor:pointer}
+.btn.fill,.btn.on{background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.35;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row label.t{font:600 13px system-ui}
+select,input[type=text],input[type=search]{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:13px system-ui}
+textarea{width:100%;height:190px;font:12px ui-monospace,monospace;background:var(--paper);color:var(--ink);border:var(--bw) solid var(--line);border-radius:6px;padding:8px}
+#err{color:#b00;font:12px system-ui;min-height:16px}
+small.n{font:11px system-ui;opacity:.8}
+/* reader */
+#reader{height:100%;display:flex;flex-direction:column;padding:14px 26px 6px;background:var(--paper)}
+#rview{flex:1;overflow:hidden;position:relative}
+#rtext{height:100%;column-gap:40px;column-fill:auto;font-size:var(--fs);line-height:1.55;text-align:justify;hyphens:auto}
+#rtext p{margin:0 0 .7em;text-indent:1.2em}
+#rtext h2{text-align:center;margin:.3em 0 .8em;font-size:1.3em}
+#rfoot{display:flex;justify-content:space-between;align-items:center;font:12px system-ui;padding:6px 0;border-top:1px solid var(--soft)}
+body.clear #status,body.clear #nav,body.clear #rfoot{display:none}
+body.clear #reader{padding:22px 30px}
+#rview{cursor:pointer}
+/* calendar */
+.cal{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:8px}
+.cal th{font:600 12px system-ui;padding:4px}
+.cal td{border:1px solid var(--soft);height:50px;vertical-align:top;font:14px system-ui;padding:3px;position:relative}
+.cal td.today{border:var(--bw) solid var(--line);font-weight:800}
+.cal td i{position:absolute;bottom:4px;left:50%;width:7px;height:7px;margin-left:-3px;background:var(--ink);border-radius:50%}
+/* library */
+.lbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.chips{display:flex;gap:6px;margin:6px 0}
+.chip{border:1px solid var(--line);border-radius:20px;padding:4px 12px;font:600 12px system-ui;cursor:pointer;background:var(--paper);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--paper)}
+.selbar{position:sticky;top:-16px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:8px;padding:6px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:3}
+.bl{display:flex;gap:10px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--soft);cursor:pointer}
+.bl.sel{background:rgba(128,128,128,.22)}
+.bl .m{flex:1;min-width:0}.bl .m b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bl .m span{font:12px system-ui;opacity:.85}
+.ck{width:22px;height:22px;border:2px solid var(--line);border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;font:700 15px system-ui}
+.ck.on{background:var(--ink);color:var(--paper)}
+.covers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 12px}
+.cv{position:relative;cursor:pointer}
+.cv .im{border:2px solid var(--line);aspect-ratio:2/3;overflow:hidden;background:#fff}
+.cv .im svg{display:block;width:100%;height:100%}
+.cv.sel .im{outline:4px solid var(--ink);outline-offset:2px}
+.cv .ck{position:absolute;top:6px;left:6px;background:var(--paper)}.cv .ck.on{background:var(--ink)}
+.cv .t{font:600 12px system-ui;margin-top:4px;line-height:1.2;max-height:30px;overflow:hidden}
+.cv .a{font:11px system-ui;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv .pg{height:4px;border:1px solid var(--line);margin-top:3px}.cv .pg i{display:block;height:100%;background:var(--ink)}
+/* modal */
+#modal{position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:20}
+#modal .box{background:var(--paper);border:3px solid var(--line);border-radius:12px;padding:18px;width:440px;max-width:92%}
+#modal h3{margin:0 0 10px;font-size:20px}
+#modal .bt{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#modal input[type=text]{width:100%;font-size:18px;padding:10px}
+/* sudoku */
+.sd{display:grid;grid-template-columns:repeat(9,1fr);width:432px;margin:8px auto;border:3px solid var(--line)}
+.sd div{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:28px var(--font);border:1px solid var(--soft);cursor:pointer;position:relative;color:var(--ink)}
+.sd div.g{font-weight:800;background:rgba(128,128,128,.2)}
+.sd div.pe{background:rgba(128,128,128,.13)}.sd div.g.pe{background:rgba(128,128,128,.28)}
+.sd div.sm{background:rgba(128,128,128,.4)}
+.sd div.sel{background:var(--ink);color:var(--paper)}
+.sd div.bad{color:#fff;background:repeating-linear-gradient(45deg,#000,#000 4px,#666 4px,#666 8px)}
+.sd div:nth-child(3n){border-right:2px solid var(--line)}
+.sd div:nth-child(n+19):nth-child(-n+27),.sd div:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--line)}
+.sd .nt{display:grid;grid-template-columns:repeat(3,1fr);width:100%;height:100%;font:11px system-ui;font-weight:600}
+.sd .nt i{font-style:normal;display:flex;align-items:center;justify-content:center}
+.pads{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;width:432px;margin:0 auto 6px}
+.pads .btn{padding:8px 0;font-size:20px;font-family:var(--font);position:relative}
+.pads .btn sup{position:absolute;top:1px;right:3px;font:9px system-ui}
+/* telegram */
+.chat{display:flex;gap:12px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--soft);cursor:pointer}
+.av{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font:700 18px system-ui;flex:none}
+.chat .m{flex:1;min-width:0}.chat b{font-size:17px}.chat .l{font:13px system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.bdg{background:var(--ink);color:var(--paper);border-radius:12px;padding:1px 8px;font:700 12px system-ui}
+#msgs{flex:1;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.bub{max-width:78%;padding:8px 12px;border:var(--bw) solid var(--line);border-radius:14px;font:16px system-ui;line-height:1.3}
+.bub.me{align-self:flex-end;background:var(--ink);color:var(--paper)}
+.bub small{display:block;font-size:10px;opacity:.7;margin-top:2px;text-align:right}
+.ph{width:200px;height:120px;background:repeating-linear-gradient(45deg,#bbb,#bbb 6px,#ddd 6px,#ddd 12px);margin-bottom:4px;border-radius:6px}
+#sendrow{display:flex;gap:6px;padding:8px;border-top:var(--bw) solid var(--line);background:var(--paper)}
+#sendrow input{flex:1;font-size:16px;padding:9px}
+#tint{position:absolute;inset:0;pointer-events:none;z-index:25;mix-blend-mode:multiply;background:#fff}
+input[type=time],input[type=range]{background:var(--paper);color:var(--ink);font:13px system-ui}
+input[type=range]{accent-color:var(--ink)}
+.tbtn{padding:12px 0;font-size:20px;min-width:54px}
+/* saver */
+#saver{position:absolute;inset:0;background:#000;z-index:30;display:none;cursor:pointer}
+#saver svg,#saver img{width:100%;height:100%;object-fit:cover;display:block}
+#saver span{position:absolute;bottom:12px;left:0;right:0;text-align:center;font:12px system-ui;color:#fff;mix-blend-mode:difference}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="device">
+    <div id="screen">
+      <div id="status"><span id="stime"></span><span><button id="sunbtn" class="btn" style="padding:0 8px;border-width:1px;font-size:13px">☀ 40%</button> Wi‑Fi ▪ 🔋 82%</span></div>
+      <div id="main"></div>
+      <div id="nav"></div>
+      <div id="modal"><div class="box" id="mbox"></div></div>
+      <div id="tint"></div>
+      <div id="saver"></div>
+    </div>
+    <div id="btns"><button id="bprev" title="Previous page (←)"></button><button id="bnext" title="Next page (→)"></button></div>
+  </div>
+</div>
+<div id="hint">Prototype of the Libra 2 interface (632×840 = half-res of 1264×1680). Side buttons or ← → keys turn pages.</div>
+<script src="sudoku-data.js"></script>
+<script>
+/* ================= config ================= */
+const DEFAULT={
+  theme:{font:"Georgia, serif",fontSize:18,invert:false,borderWidth:2},
+  home:{greeting:"Hello, Josh",columns:3,widgets:["clock","continue","agenda","apps"],
+    background:{mode:"art",art:2,veil:0.55},
+    apps:[{id:"library",label:"Library"},{id:"reader",label:"Reading"},{id:"calendar",label:"Calendar"},{id:"sudoku",label:"Sudoku"},{id:"tetris",label:"Tetris"},{id:"telegram",label:"Telegram"},{id:"settings",label:"Look & feel"},{id:"sleep",label:"Screensaver"}]},
+  reader:{clear:false},
+  light:{brightness:45,warmth:35,schedule:{on:true,start:"20:00",end:"06:30",ramp:60,toBrightness:15,toWarmth:85}},
+  v:4,
+  calendar:{icsUrl:"private Google Calendar ICS link"}
+};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let cfg=LS.get("kobo-cfg3",null)||clone(DEFAULT);
+const saveCfg=()=>LS.set("kobo-cfg3",cfg);
+if(cfg.v!==4){cfg.light=cfg.light||clone(DEFAULT.light);if(!cfg.home.apps.some(a=>a.id==="tetris"))cfg.home.apps.splice(4,0,{id:"tetris",label:"Tetris"});cfg.reader=cfg.reader||{clear:false};cfg.v=4;saveCfg()}
+let bgImage=LS.get("kobo-bgimg",null), saverImage=null, artIdx=0;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ICONS={
+  home:'<path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/>',
+  library:'<path d="M4 4h4v16H4zM10 4h4v16h-4zM16 6l4 1-3 13-4-1z"/>',
+  reader:'<path d="M4 4h7a3 3 0 013 3v13a2 2 0 00-2-2H4zM20 4h-7a3 3 0 00-3 3v13a2 2 0 012-2h8z"/>',
+  calendar:'<path d="M4 5h16v16H4zM4 10h16M8 3v4M16 3v4"/>',
+  sudoku:'<path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/>',
+  telegram:'<path d="M21 3L3 11l7 3 3 7zM10 14l11-11"/>',
+  tetris:'<path d="M4 4h6v6H4zM10 10h6v6h-6zM16 16h4v4h-4zM10 4h4v4h-4z"/>',
+  settings:'<path d="M4 6h16M4 12h16M4 18h16M9 4v4M15 10v4M8 16v4"/>'
+};
+const NAV=[["home","Home"],["library","Library"],["reader","Reading"],["calendar","Calendar"],["sudoku","Sudoku"],["tetris","Tetris"],["telegram","Telegram"],["settings","Look"]];
+const svgi=k=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">${ICONS[k]}</svg>`;
+
+/* ================= library data ================= */
+const daysAgo=n=>new Date(Date.now()-n*864e5).toISOString().slice(0,10);
+const SEED=[
+ ["The Power of a Moment","Josh Valcárcel","epub",1.2,"Bathos",3,.4],["El Poder de un Momento","Josh Valcárcel","epub",1.3,"Bathos",3,0],
+ ["Dios, ¿en serio?","Josh Valcárcel","pdf",3.4,"Bathos",8,0],["How Sleep the Brave","James H. Hunter","epub",.9,"Bathos",14,.1],
+ ["Tito, compañero de la cruz","F. M. Kingsley","epub",1.1,"Bathos",20,0],["Valeria, la mártir de las catacumbas","W. H. Withrow","epub",1.0,"Bathos",25,0],
+ ["The Pilgrim’s Progress","John Bunyan","epub",.7,"Classics",60,.55],["Stepping Heavenward","Elizabeth Prentiss","epub",.8,"Classics",90,0],
+ ["Abide in Christ","Andrew Murray","epub",.5,"Classics",120,1],["Holiness","J. C. Ryle","epub",.6,"Classics",150,.2],
+ ["scan_2026-11-12.pdf","Unknown","pdf",8.2,"Inbox",4,0],["sermon-2-pedro.txt","Josh Valcárcel","txt",.01,"Inbox",1,0],["Camp brochure draft","Josh Valcárcel","pdf",5.5,"Inbox",2,0]
+].map((a,i)=>({id:"b"+i,title:a[0],author:a[1],fmt:a[2],size:a[3],dir:a[4],added:daysAgo(a[5]),progress:a[6]}));
+let books=LS.get("kobo-lib",null)||SEED;
+const saveLib=()=>LS.set("kobo-lib",books);
+let L={view:"covers",sort:"added",dir:"All",q:"",select:false,sel:new Set()};
+let current=books.find(b=>b.title.startsWith("The Pilgrim"))||books[0];
+
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
+function wrap(t,n){const w=t.split(" "),out=[];let l="";w.forEach(x=>{if((l+" "+x).trim().length>n&&l){out.push(l);l=x}else l=(l+" "+x).trim()});if(l)out.push(l);return out.slice(0,4)}
+function cover(b){
+  const h=hash(b.id+b.title),g=40+h%140,k=h%4;let p="";
+  if(k===0)for(let i=0;i<14;i++)p+=`<rect y="${i*16}" width="120" height="8" fill="rgb(${g-30},${g-30},${g-30})"/>`;
+  if(k===1)for(let i=1;i<9;i++)p+=`<circle cx="60" cy="150" r="${i*16}" fill="none" stroke="rgb(${g+50},${g+50},${g+50})" stroke-width="3"/>`;
+  if(k===2)for(let i=-10;i<12;i++)p+=`<path d="M${i*14} 180L${i*14+90} 0" stroke="rgb(${g+40},${g+40},${g+40})" stroke-width="5"/>`;
+  if(k===3)for(let x=0;x<7;x++)for(let y=0;y<10;y++)p+=`<circle cx="${10+x*17}" cy="${10+y*18}" r="${3+(x+y)%4}" fill="rgb(${g+60},${g+60},${g+60})"/>`;
+  const lines=wrap(b.title,11);
+  return `<svg viewBox="0 0 120 180" preserveAspectRatio="none"><rect width="120" height="180" fill="rgb(${g},${g},${g})"/>${p}<rect x="8" y="22" width="104" height="${lines.length*15+10}" fill="#f4f2ea"/>${lines.map((l,i)=>`<text x="60" y="${38+i*15}" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="12" fill="#111">${esc(l)}</text>`).join("")}<text x="60" y="168" text-anchor="middle" font-family="system-ui" font-size="9" fill="#f4f2ea">${esc(b.author.slice(0,22))}</text></svg>`;
+}
+function visibleBooks(){
+  let r=books.filter(b=>(L.dir==="All"||b.dir===L.dir)&&(!L.q||(b.title+" "+b.author).toLowerCase().includes(L.q.toLowerCase())));
+  const s={title:(a,b)=>a.title.localeCompare(b.title),author:(a,b)=>a.author.localeCompare(b.author),added:(a,b)=>b.added.localeCompare(a.added),size:(a,b)=>b.size-a.size}[L.sort];
+  return r.sort(s);
+}
+function library(m){
+  const vb=visibleBooks(),dirs=["All",...new Set(books.map(b=>b.dir))];
+  const n=L.sel.size,allSel=vb.length&&vb.every(b=>L.sel.has(b.id));
+  const item=b=>{const sel=L.sel.has(b.id),ck=L.select?`<div class="ck ${sel?'on':''}">${sel?'✓':''}</div>`:"";
+    return L.view==="covers"
+     ?`<div class="cv ${sel?'sel':''}" data-book="${b.id}"><div class="im">${cover(b)}</div>${ck}<div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div>${b.progress?`<div class="pg"><i style="width:${b.progress*100}%"></i></div>`:""}</div>`
+     :`<div class="bl ${sel?'sel':''}" data-book="${b.id}">${ck}<div style="width:36px;height:54px;border:1px solid var(--line);flex:none">${cover(b)}</div><div class="m"><b>${esc(b.title)}</b><span>${esc(b.author)} · ${b.fmt.toUpperCase()} · ${b.size} MB · ${b.dir} · ${b.added}${b.progress?` · ${Math.round(b.progress*100)}%`:""}</span></div></div>`};
+  m.innerHTML=`<div class="pad" style="background:var(--paper)"><div class="lbar">
+    <button class="btn ${L.view==='covers'?'on':''}" data-lv="covers">Covers</button><button class="btn ${L.view==='list'?'on':''}" data-lv="list">List</button>
+    <select id="lsort">${[["added","Recently added"],["title","Title"],["author","Author"],["size","Size"]].map(([v,l])=>`<option value="${v}" ${L.sort===v?'selected':''}>${l}</option>`).join("")}</select>
+    <input type="search" id="lq" placeholder="Search" value="${esc(L.q)}" style="flex:1;min-width:80px">
+    <button class="btn ${L.select?'fill':''}" id="lselect">${L.select?'Done':'Select'}</button></div>
+    <div class="chips">${dirs.map(d=>`<span class="chip ${L.dir===d?'on':''}" data-dir="${esc(d)}">${esc(d)}${d==='All'?` (${books.length})`:` (${books.filter(b=>b.dir===d).length})`}</span>`).join("")}</div>
+    ${L.select?`<div class="selbar"><b style="font:700 13px system-ui;margin:0 4px">${n} selected</b>
+      <button class="btn" id="lall">${allSel?'Select none':'Select all'}</button><button class="btn" id="linv">Invert</button>
+      <button class="btn" id="lren" ${n===1?'':'disabled'}>Rename</button><button class="btn" id="lmov" ${n?'':'disabled'}>Move…</button><button class="btn" id="linf" ${n?'':'disabled'}>Info</button><button class="btn" id="ldel" ${n?'':'disabled'}>Delete</button></div>`:""}
+    ${vb.length?`<div class="${L.view==='covers'?'covers':''}">${vb.map(item).join("")}</div>`:"<p>No books here.</p>"}
+    <p><small class="n">${vb.length} of ${books.length} books · on the device this is the real /KoboReader folder</small></p></div>`;
+}
+/* modal */
+function modal(title,body,buttons){
+  const box=$("#mbox");box.innerHTML=`<h3>${title}</h3>${body}<div class="bt">${buttons.map((b,i)=>`<button class="btn ${b.fill?'fill':''}" data-mb="${i}">${b.label}</button>`).join("")}</div>`;
+  $("#modal").style.display="flex";box._b=buttons;const i=box.querySelector("input[type=text]");if(i){i.focus();i.select()}
+}
+const closeModal=()=>{$("#modal").style.display="none";$("#mbox").style.width="";if(simMin!=null){simMin=null;applyLight()}};
+$("#modal").addEventListener("click",e=>{
+  const b=e.target.closest("[data-mb]");if(b){const f=$("#mbox")._b[+b.dataset.mb];closeModal();f.run&&f.run()}
+  else if(e.target.id==="modal")closeModal();
+});
+function libAction(id){
+  const ids=[...L.sel],bs=books.filter(b=>ids.includes(b.id));
+  if(id==="lren"){const b=bs[0];modal("Rename",`<input type="text" id="rn" value="${esc(b.title)}"><small class="n">Extension (.${b.fmt}) is kept.</small>`,[{label:"Cancel"},{label:"Rename",fill:1,run:()=>{const v=$("#rn")?.value;}}]);
+    $("#mbox")._b[1].run=()=>{};$("#mbox").querySelector("[data-mb='1']").onclick=()=>{const v=$("#rn").value.trim();if(v){b.title=v;saveLib()}closeModal();render()}}
+  if(id==="ldel")modal("Delete "+bs.length+" book"+(bs.length>1?"s":"")+"?",`<div style="font:14px system-ui;max-height:150px;overflow:auto">${bs.map(b=>"• "+esc(b.title)).join("<br>")}</div><small class="n">This removes the files from the device.</small>`,[{label:"Cancel"},{label:"Delete",fill:1,run:()=>{books=books.filter(b=>!ids.includes(b.id));L.sel.clear();saveLib();render()}}]);
+  if(id==="lmov"){const dirs=[...new Set(books.map(b=>b.dir)),"Inbox","Bathos","Classics","Reading now"].filter((v,i,a)=>a.indexOf(v)===i);
+    modal("Move to folder",`<select id="mv" style="width:100%;font-size:16px;padding:8px">${dirs.map(d=>`<option>${esc(d)}</option>`).join("")}</select>`,[{label:"Cancel"},{label:"Move",fill:1,run:()=>{}}]);
+    $("#mbox").querySelector("[data-mb='1']").onclick=()=>{const d=$("#mv").value;bs.forEach(b=>b.dir=d);saveLib();closeModal();render()}}
+  if(id==="linf")modal("Info",`<div style="font:14px system-ui;max-height:220px;overflow:auto">${bs.map(b=>`<b>${esc(b.title)}</b><br>${esc(b.author)} · ${b.fmt.toUpperCase()} · ${b.size} MB<br>Folder: ${esc(b.dir)} · Added ${b.added}<br><br>`).join("")}<b>Total: ${bs.reduce((a,b)=>a+b.size,0).toFixed(2)} MB</b></div>`,[{label:"Close",fill:1}]);
+}
+
+/* ================= home ================= */
+const hm=d=>d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+const today=new Date();
+const ev=(dd,h,m,t)=>({d:new Date(today.getFullYear(),today.getMonth(),today.getDate()+dd,h,m),t});
+const events=[ev(0,9,30,"Morning planning"),ev(0,18,0,"Evening call"),ev(1,11,0,"Dentist"),ev(2,19,30,"Prayer meeting"),ev(4,10,0,"Print proofs"),ev(7,16,0,"Team visit")];
+function applyTheme(){
+  const r=document.documentElement.style,t=cfg.theme;
+  r.setProperty("--font",t.font);r.setProperty("--fs",t.fontSize+"px");r.setProperty("--bw",t.borderWidth+"px");
+  document.body.classList.toggle("inv",!!t.invert);
+}
+function applyBg(){
+  const m=$("#main"),bg=cfg.home.background||{mode:"none"};
+  let url=null;
+  if(screen==="home"){if(bg.mode==="art")url="data:image/svg+xml;utf8,"+encodeURIComponent(art(bg.art||0));else if(bg.mode==="image"&&bgImage)url=bgImage}
+  const v=Math.min(1,Math.max(0,bg.veil??.5)),inv=document.body.classList.contains("inv");
+  const rgb=inv?"21,21,19":"235,233,225";
+  m.style.backgroundImage=url?`linear-gradient(rgba(${rgb},${v}),rgba(${rgb},${v})),url("${url}")`:"none";
+  m.style.backgroundColor=url?"transparent":"var(--paper)";
+}
+function home(m){
+  const d=new Date(),h=cfg.home;
+  const W={
+    clock:()=>`<div style="background:rgba(${document.body.classList.contains('inv')?'21,21,19':'235,233,225'},.75);display:inline-block;padding:6px 12px;border-radius:10px"><div class="clock">${hm(d)}</div><div class="date">${esc(h.greeting)} · ${d.toLocaleDateString([], {weekday:"long",day:"numeric",month:"long"})}</div></div>`,
+    continue:()=>`<div class="card" data-go="reader" style="cursor:pointer;display:flex;gap:14px;align-items:center"><div style="width:50px;height:75px;border:2px solid var(--line);flex:none">${cover(current)}</div><div style="flex:1;min-width:0"><h3>Continue reading</h3><b>${esc(current.title)}</b><div style="font:12px system-ui;opacity:.85">${esc(current.author)} · ${Math.round(100*(current.progress||0))}%</div><div class="bar"><i style="width:${Math.round(100*(current.progress||0))}%"></i></div></div></div>`,
+    agenda:()=>{const t=events.filter(e=>e.d.toDateString()===d.toDateString());return `<div class="card"><h3>Today</h3>${t.length?t.map(e=>`<div class="ev"><b>${hm(e.d)}</b>${esc(e.t)}</div>`).join(""):"Nothing scheduled."}</div>`},
+    apps:()=>`<div class="grid" style="grid-template-columns:repeat(${h.columns},1fr)">${h.apps.map(a=>`<button class="tile" data-go="${a.id}">${esc(a.label)}</button>`).join("")}</div>`
+  };
+  m.innerHTML=`<div class="pad">${h.widgets.map(w=>W[w]?W[w]():"").join("")}</div>`;
+}
+
+/* ================= reader ================= */
+const BOOK=[["h",""],
+"As I walked through the wilderness of this world, I lighted on a certain place where was a Den, and I laid me down in that place to sleep; and as I slept I dreamed a dream.",
+"I dreamed, and behold, I saw a man clothed with rags, standing in a certain place, with his face from his own house, a book in his hand, and a great burden upon his back.",
+"I looked, and saw him open the book, and read therein; and as he read, he wept and trembled; and not being able longer to contain, he brake out with a lamentable cry, saying, What shall I do?",
+"In this plight, therefore, he went home and refrained himself as long as he could, that his wife and children should not perceive his distress; but he could not be silent long, because that his trouble increased.",
+"Wherefore at length he brake his mind to his wife and children; and thus he began to talk to them: O my dear wife, said he, and you the children of my bowels, I, your dear friend, am in myself undone by reason of a burden that lieth hard upon me.",
+"At this his relations were sore amazed; not for that they believed that what he had said to them was true, but because they thought that some frenzy distemper had got into his head; therefore, it drawing towards night, and they hoping that sleep might settle his brains, with all haste they got him to bed.",
+"But the night was as troublesome to him as the day; wherefore, instead of sleeping, he spent it in sighs and tears. So when the morning was come, they would know how he did. He told them, Worse and worse.",
+"He also set to talking to them again; but they began to be hardened. They also thought to drive away his distemper by harsh and surly carriages to him; sometimes they would deride, sometimes they would chide, and sometimes they would quite neglect him.",
+"Wherefore he began to retire himself to his chamber to pray for and pity them, and also to condole his own misery; he would also walk solitarily in the fields, sometimes reading, and sometimes praying: and thus for some days he spent his time."];
+let rpage=0,rpages=1;
+function reader(m){
+  m.innerHTML=`<div id="reader"><div id="rview"><div id="rtext"><h2>${esc(current.title)}</h2>${BOOK.slice(1).map(x=>`<p>${x}</p>`).join("")}</div></div><div id="rfoot"><span>${esc(current.title.slice(0,28))}</span><span id="rpg"></span><span><button class="btn" id="rclear" style="padding:1px 8px">Clear</button> <button class="btn" id="fm" style="padding:1px 8px">A−</button> <button class="btn" id="fp" style="padding:1px 8px">A+</button></span></div></div>`;
+  const t=$("#rtext"),w=$("#rview").clientWidth;t.style.columnWidth=w+"px";t.style.width=w+"px";
+  $("#rview").onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),f=(e.clientX-r.left)/r.width;
+    if(f<0.3)turn(-1);else if(f>0.7)turn(1);else{cfg.reader=cfg.reader||{};cfg.reader.clear=!cfg.reader.clear;saveCfg();render()}};
+  requestAnimationFrame(()=>{rpages=Math.max(1,Math.round(t.scrollWidth/(w+40)));rpage=Math.round((current.progress||0)*(rpages-1));showPage()});
+}
+function showPage(){const t=$("#rtext");if(!t)return;t.style.transform=`translateX(${-rpage*(t.clientWidth+40)}px)`;$("#rpg").textContent=`Page ${rpage+1} / ${rpages}`;current.progress=rpages>1?rpage/(rpages-1):0;saveLib()}
+
+/* ================= calendar ================= */
+function calendar(m){
+  const d=new Date(),y=d.getFullYear(),mo=d.getMonth(),n=new Date(y,mo+1,0).getDate(),off=(new Date(y,mo,1).getDay()+6)%7;
+  let cells="";for(let i=0;i<off;i++)cells+="<td></td>";
+  for(let k=1;k<=n;k++){if((off+k-1)%7===0&&k>1)cells+="</tr><tr>";const has=events.some(e=>e.d.getDate()===k&&e.d.getMonth()===mo);cells+=`<td class="${k===d.getDate()?'today':''}">${k}${has?'<i></i>':''}</td>`}
+  const up=events.filter(e=>e.d>=new Date(y,mo,d.getDate())).slice(0,5);
+  m.innerHTML=`<div class="pad" style="background:var(--paper)"><h2>${d.toLocaleDateString([], {month:"long",year:"numeric"})}</h2>
+  <table class="cal"><tr>${["Mo","Tu","We","Th","Fr","Sa","Su"].map(x=>`<th>${x}</th>`).join("")}</tr><tr>${cells}</tr></table>
+  <div class="card"><h3>Upcoming (sample data)</h3>${up.map(e=>`<div class="ev"><b>${e.d.toLocaleDateString([], {weekday:"short",day:"numeric"})}</b>${hm(e.d)} ${esc(e.t)}</div>`).join("")}</div>
+  <small class="n">On the device this syncs over Wi‑Fi from a private Google Calendar link (read-only first), then full two-way sync.</small></div>`;
+}
+
+/* ================= sudoku ================= */
+const LEVELS=["Easy","Medium","Hard","Expert"];
+const SD=LS.get("kobo-sd2",{level:0,idx:[0,0,0,0],saves:{}});
+let S=null; // current game
+const peers=i=>{const r=Math.floor(i/9),c=i%9,br=r-r%3,bc=c-c%3,o=[];for(let k=0;k<81;k++){const rr=Math.floor(k/9),cc=k%9;if(k!==i&&(rr===r||cc===c||(rr>=br&&rr<br+3&&cc>=bc&&cc<bc+3)))o.push(k)}return o};
+const PEERS=Array.from({length:81},(_,i)=>peers(i));
+function solveStr(p){
+  const g=p.split("").map(Number);
+  const cand=i=>{let m=0x1ff;for(const q of PEERS[i])if(g[q])m&=~(1<<(g[q]-1));return m};
+  (function rec(){
+    let best=-1,bm=0,bc=10;
+    for(let i=0;i<81;i++)if(!g[i]){const m=cand(i);let c=0,x=m;while(x){c++;x&=x-1}if(c<bc){bc=c;best=i;bm=m}if(c===0)return false}
+    if(best<0)return true;
+    for(let d=1;d<=9;d++)if(bm>>(d-1)&1){g[best]=d;if(rec())return true}
+    g[best]=0;return false;
+  })();
+  return g.join("");
+}
+function puzzleList(l){return (window.SUDOKU&&window.SUDOKU[l])||[]}
+function loadGame(){
+  const l=SD.level,list=puzzleList(l);if(!list.length){S=null;return}
+  SD.idx[l]=((SD.idx[l]%list.length)+list.length)%list.length;
+  const puz=list[SD.idx[l]],key=l+"-"+SD.idx[l],sv=SD.saves[key];
+  S={level:l,idx:SD.idx[l],puz,sol:solveStr(puz),board:sv?sv.board.split("").map(Number):puz.split("").map(Number),
+     notes:sv?sv.notes.slice():Array(81).fill(0),sel:-1,pencil:false,hist:[],check:false,auto:true};
+}
+function persistGame(){if(!S)return;SD.saves[S.level+"-"+S.idx]={board:S.board.join(""),notes:S.notes};LS.set("kobo-sd2",SD)}
+function sudoku(m){
+  if(!S)loadGame();
+  if(!S){m.innerHTML='<div class="pad">Puzzle data not loaded.</div>';return}
+  const sel=S.sel,selV=sel>=0?S.board[sel]:0,pe=sel>=0?new Set(PEERS[sel]):new Set();
+  const solved=S.board.join("")===S.sol;
+  const counts=Array(10).fill(0);S.board.forEach(v=>counts[v]++);
+  const cell=i=>{
+    const v=S.board[i],given=S.puz[i]!=="0";
+    let cl=[];if(given)cl.push("g");
+    if(i===sel)cl.push("sel");else if(v&&v===selV)cl.push("sm");else if(pe.has(i))cl.push("pe");
+    if(S.check&&!given&&v&&v!==+S.sol[i])cl.push("bad");
+    let inner=v?v:(S.notes[i]?`<div class="nt">${[1,2,3,4,5,6,7,8,9].map(d=>`<i>${S.notes[i]>>(d-1)&1?d:""}</i>`).join("")}</div>`:"");
+    return `<div data-c="${i}" class="${cl.join(' ')}">${inner}</div>`;
+  };
+  m.innerHTML=`<div class="pad" style="background:var(--paper);text-align:center">
+   <div class="row" style="justify-content:center;margin-top:0">${LEVELS.map((n,i)=>`<button class="btn ${SD.level===i?'fill':''}" data-lvl="${i}">${n}</button>`).join("")}</div>
+   <div class="row" style="justify-content:center;margin:4px 0"><button class="btn" id="sprev">‹</button><b style="font:600 14px system-ui">${LEVELS[S.level]} · #${S.idx+1} of ${puzzleList(S.level).length}</b><button class="btn" id="snext">›</button><button class="btn" id="srand">Random</button></div>
+   <div class="sd">${Array.from({length:81},(_,i)=>cell(i)).join("")}</div>
+   <div class="pads">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="btn" data-n="${n}" ${counts[n]>=9?'disabled':''}>${n}<sup>${9-counts[n]}</sup></button>`).join("")}</div>
+   <div class="row" style="justify-content:center"><button class="btn ${S.pencil?'fill':''}" id="spen">✎ Pencil ${S.pencil?'ON':'off'}</button><button class="btn" id="sera">Erase</button><button class="btn" id="sund" ${S.hist.length?'':'disabled'}>Undo</button><button class="btn" id="shint">Hint</button><button class="btn" id="schk">Check</button></div>
+   <div class="row" style="justify-content:center;margin:2px 0"><label class="t"><input type="checkbox" id="sauto" ${S.auto?'checked':''}> auto-clear pencil marks</label><button class="btn" id="srst">Restart</button></div>
+   <div style="font:600 15px system-ui;min-height:20px">${solved?'✓ Solved! Tap › for the next puzzle.':''}</div></div>`;
+}
+function sdPush(){S.hist.push({b:S.board.slice(),n:S.notes.slice()});if(S.hist.length>300)S.hist.shift()}
+function sdPlace(d){
+  if(!S||S.sel<0||S.puz[S.sel]!=="0")return;
+  sdPush();S.check=false;
+  if(d===0){S.board[S.sel]=0;S.notes[S.sel]=0}
+  else if(S.pencil){if(S.board[S.sel])return S.hist.pop();S.notes[S.sel]^=1<<(d-1)}
+  else{S.board[S.sel]=d;S.notes[S.sel]=0;if(S.auto)PEERS[S.sel].forEach(p=>S.notes[p]&=~(1<<(d-1)))}
+  persistGame();render();
+}
+
+/* ================= telegram ================= */
+let CH=LS.get("kobo-tg",null)||[
+ {id:1,name:"Family",ini:"F",unread:2,msgs:[{f:"t",x:"Photo of the baby!",ph:1,t:"09:12"},{f:"t",x:"Come for lunch on Sunday?",t:"09:14"}]},
+ {id:2,name:"Camp team",ini:"C",unread:0,msgs:[{f:"t",x:"Builders are finished with the kitchen floor.",t:"Yesterday"},{f:"me",x:"Great — I’ll visit on Thursday.",t:"Yesterday"}]},
+ {id:3,name:"Church",ini:"Ch",unread:5,msgs:[{f:"t",x:"Reminder: prayer meeting Wednesday.",t:"Mon"},{f:"t",x:"🎤 Voice message 0:23 (play on your phone)",t:"Mon"}]},
+ {id:4,name:"Saved messages",ini:"★",unread:0,msgs:[{f:"me",x:"Idea: Libra 2 custom system.",t:"Sun"}]}];
+let tgOpen=null;
+const saveTg=()=>LS.set("kobo-tg",CH);
+function telegram(m){
+  if(tgOpen==null){
+    m.innerHTML=`<div class="pad" style="background:var(--paper)"><h2>Telegram</h2><small class="n">Demo data. The real version connects with Telegram’s official TDLib library — text, photos (dithered for e-ink) and voice notes shown as placeholders.</small>
+     ${CH.map(c=>`<div class="chat" data-chat="${c.id}"><div class="av">${esc(c.ini)}</div><div class="m"><b>${esc(c.name)}</b><div class="l">${esc(c.msgs[c.msgs.length-1].x)}</div></div>${c.unread?`<span class="bdg">${c.unread}</span>`:""}</div>`).join("")}</div>`;
+  }else{
+    const c=CH.find(x=>x.id===tgOpen);c.unread=0;
+    m.innerHTML=`<div style="display:flex;flex-direction:column;height:100%;background:var(--paper)"><div style="display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:var(--bw) solid var(--line)"><button class="btn" id="tgback">‹ Back</button><div class="av" style="width:36px;height:36px;font-size:14px">${esc(c.ini)}</div><b style="font:700 17px system-ui">${esc(c.name)}</b></div>
+     <div id="msgs">${c.msgs.map(g=>`<div class="bub ${g.f==='me'?'me':''}">${g.ph?'<div class="ph"></div>':''}${esc(g.x)}<small>${g.t}</small></div>`).join("")}</div>
+     <div id="sendrow"><input type="text" id="tgin" placeholder="Message"><button class="btn fill" id="tgsend">Send</button></div></div>`;
+    const ms=$("#msgs");ms.scrollTop=ms.scrollHeight;
+  }
+}
+function tgSend(){
+  const i=$("#tgin"),v=i.value.trim();if(!v)return;
+  const c=CH.find(x=>x.id===tgOpen);c.msgs.push({f:"me",x:v,t:hm(new Date())});saveTg();render();
+  setTimeout(()=>{if(tgOpen===c.id&&screen==="telegram"){c.msgs.push({f:"t",x:"(demo auto-reply) 👍",t:hm(new Date())});saveTg();render()}},1200);
+}
+
+/* ================= settings ================= */
+function settings(m){
+  const bg=cfg.home.background||{mode:"none",veil:.5};
+  m.innerHTML=`<div class="pad" style="background:var(--paper)"><h2>Look &amp; feel</h2>
+  <small class="n">The whole interface is one config file. Edit and press Apply — nothing is lost, Reset restores the defaults.</small>
+  <div class="row"><label class="t">Columns</label>${[1,2,3,4].map(n=>`<button class="btn ${cfg.home.columns===n?'fill':''}" data-col="${n}">${n}</button>`).join("")}
+  <label class="t">Font</label><select id="fsel">${[["Georgia, serif","Georgia"],["'Times New Roman', serif","Times"],["system-ui, sans-serif","Sans"],["ui-monospace, monospace","Mono"]].map(([v,l])=>`<option value='${v}' ${cfg.theme.font===v?'selected':''}>${l}</option>`).join("")}</select>
+  <button class="btn ${cfg.theme.invert?'fill':''}" id="inv">Dark mode</button></div>
+  <div class="card" style="margin:8px 0"><h3>Homescreen background</h3><div class="row" style="margin-top:0">
+   <button class="btn ${bg.mode==='none'?'fill':''}" data-bgm="none">None</button>
+   ${[0,1,2,3].map(i=>`<button class="btn ${bg.mode==='art'&&bg.art===i?'fill':''}" data-bga="${i}">Art ${i+1}</button>`).join("")}
+   <label class="btn ${bg.mode==='image'?'fill':''}" style="cursor:pointer">My image…<input type="file" accept="image/*" id="bgfile" hidden></label></div>
+   <div class="row" style="margin-bottom:0"><label class="t">Fade (keeps text readable)</label><input type="range" id="veil" min="0" max="0.9" step="0.05" value="${bg.veil??.5}"></div></div>
+  <textarea id="json" spellcheck="false">${esc(JSON.stringify(cfg,null,2))}</textarea><div id="err"></div>
+  <div class="row"><button class="btn fill" id="apply">Apply</button><button class="btn" id="reset">Reset</button>
+  <button class="btn" id="sleep">Sleep now</button><label class="btn" style="cursor:pointer">Screensaver image…<input type="file" accept="image/*" id="img" hidden></label></div></div>`;
+}
+
+/* ================= screensaver / art ================= */
+function art(i){
+  const g=a=>`rgb(${a},${a},${a})`;let s='<svg viewBox="0 0 632 840" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="632" height="840" fill="#e9e7df"/>';
+  if(i%4===0)for(let k=1;k<26;k++)s+=`<circle cx="316" cy="420" r="${k*18}" fill="none" stroke="${g(20+k*7)}" stroke-width="${1+k%4}"/>`;
+  if(i%4===1)for(let k=0;k<40;k++){let p="M0 "+(60+k*18);for(let x=0;x<=632;x+=16)p+=` L${x} ${60+k*18+Math.sin(x/60+k/3)*16}`;s+=`<path d="${p}" fill="none" stroke="${g(10+k*5)}" stroke-width="2"/>`}
+  if(i%4===2){[200,120,40].forEach((c,j)=>{let p=`M0 840 L0 ${520-j*70}`;for(let x=0;x<=632;x+=40)p+=` L${x} ${(520-j*70)-Math.abs(Math.sin(x*.013+j*2))*190}`;s+=`<path d="${p} L632 840Z" fill="${g(c)}"/>`});s+='<circle cx="470" cy="190" r="60" fill="#111"/>'}
+  if(i%4===3)for(let x=0;x<16;x++)for(let y=0;y<21;y++)s+=`<circle cx="${20+x*40}" cy="${20+y*40}" r="${(Math.hypot(x-8,y-10)/12)*16}" fill="#111"/>`;
+  return s+"</svg>";
+}
+function sleep(){const s=$("#saver");s.innerHTML=(saverImage?`<img src="${saverImage}">`:art(artIdx++))+"<span>Screensaver — tap or press a button to wake</span>";s.style.display="block"}
+$("#saver").onclick=()=>{$("#saver").style.display="none"};
+function readImage(file,cb){ // downscale to e-ink size, keeps storage small
+  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");const s=Math.min(1,840/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.7))};im.src=r.result};r.readAsDataURL(file);
+}
+
+/* ================= light (brightness + warmth + gradual schedule) ================= */
+const toMin=s=>{const p=(s||"0:0").split(":").map(Number);return (p[0]||0)*60+(p[1]||0)};
+let simMin=null;
+function lightEnsure(){if(!cfg.light)cfg.light=clone(DEFAULT.light);if(!cfg.light.schedule)cfg.light.schedule=clone(DEFAULT.light.schedule);return cfg.light}
+function lightAt(min){
+  const l=lightEnsure(),s=l.schedule;let b=l.brightness,w=l.warmth;
+  if(s.on){const st=toMin(s.start),en=toMin(s.end),dur=(((en-st)+1440)%1440)||1440,t=((min-st)+1440)%1440,r=Math.max(1,+s.ramp||60);
+    if(t<dur){let p=Math.min(1,t/r);if(t>dur-r)p=Math.min(p,(dur-t)/r);p=p*p*(3-2*p);b=l.brightness+(s.toBrightness-l.brightness)*p;w=l.warmth+(s.toWarmth-l.warmth)*p}}
+  return {b,w};
+}
+function nowMin(){const d=new Date();return d.getHours()*60+d.getMinutes()}
+function applyLight(){
+  const {b,w}=lightAt(simMin!=null?simMin:nowMin()),k=.42+.58*b/100,wr=w/100;
+  $("#tint").style.background=`rgb(${Math.round(255*k)},${Math.round((255-80*wr)*k)},${Math.round((255-170*wr)*k)})`;
+  const sb=$("#sunbtn");if(sb)sb.textContent="☀ "+Math.round(b)+"%";
+}
+const hh=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+function lightPanelRefresh(){
+  applyLight();if(!$("#lbrv"))return;
+  const l=lightEnsure(),s=l.schedule;
+  $("#lbrv").textContent=l.brightness+"%";$("#lwmv").textContent=l.warmth+"%";$("#ltobv").textContent=s.toBrightness+"%";$("#ltowv").textContent=s.toWarmth+"%";
+  const pts=k=>{let p="";for(let m=0;m<=1440;m+=15){p+=(m/1440*520).toFixed(1)+","+(84-lightAt(m%1440)[k]*.8).toFixed(1)+" "}return p};
+  const cur=(simMin!=null?simMin:nowMin())/1440*520,e=lightAt(simMin!=null?simMin:nowMin());
+  $("#lchart").innerHTML=`<svg viewBox="0 0 520 108" width="100%" style="display:block;margin-top:6px"><rect x="0" y="4" width="520" height="80" fill="none" stroke="currentColor" opacity=".35"/><polyline points="${pts("b")}" fill="none" stroke="currentColor" stroke-width="3"/><polyline points="${pts("w")}" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="6 5"/><line x1="${cur}" x2="${cur}" y1="4" y2="84" stroke="currentColor" stroke-width="1.5"/>${[0,6,12,18,24].map(h=>`<text x="${Math.min(h/24*520,506)}" y="100" font-size="11" font-family="system-ui" fill="currentColor">${h}h</text>`).join("")}<text x="120" y="100" font-size="11" font-family="system-ui" fill="currentColor" opacity=".8">— brightness   - - warmth</text></svg>`;
+  $("#lnow").textContent=(simMin!=null?"Preview "+hh(simMin):"Now "+hh(nowMin()))+": brightness "+Math.round(e.b)+"%, warmth "+Math.round(e.w)+"%";
+}
+function openLight(){
+  const l=lightEnsure(),s=l.schedule;
+  const sl=(id,lab,v)=>`<div class="row"><label class="t" style="width:104px">${lab}</label><input type="range" id="${id}" min="0" max="100" value="${v}" style="flex:1"><b id="${id}v" style="width:44px;font:600 13px system-ui"></b></div>`;
+  modal("Light",`${sl("lbr","Brightness",l.brightness)}${sl("lwm","Warmth",l.warmth)}
+   <label class="t" style="display:block;margin:10px 0 4px;font:600 14px system-ui"><input type="checkbox" id="lsch" ${s.on?"checked":""}> Evening schedule (changes gradually)</label>
+   <div class="row"><label class="t">From</label><input type="time" id="lstart" value="${esc(s.start)}"><label class="t">until</label><input type="time" id="lend" value="${esc(s.end)}"><label class="t">ramp</label><select id="lramp">${[15,30,60,90,120].map(v=>`<option value="${v}" ${+s.ramp===v?"selected":""}>${v} min</option>`).join("")}</select></div>
+   ${sl("ltob","Night brightness",s.toBrightness)}${sl("ltow","Night warmth",s.toWarmth)}
+   <div id="lchart"></div>
+   <div class="row"><label class="t">Preview the day</label><input type="range" id="lsim" min="0" max="1439" value="${nowMin()}" style="flex:1"><button class="btn" id="lsimoff">Live</button></div>
+   <div id="lnow" style="font:13px system-ui"></div>`,[{label:"Close",fill:1}]);
+  $("#mbox").style.width="560px";lightPanelRefresh();
+}
+function lightInput(e){
+  const id=e.target.id;if(!id||!cfg.light)return;
+  const l=lightEnsure(),s=l.schedule,v=e.target.value;
+  const map={lbr:()=>l.brightness=+v,lwm:()=>l.warmth=+v,ltob:()=>s.toBrightness=+v,ltow:()=>s.toWarmth=+v,lstart:()=>{if(v)s.start=v},lend:()=>{if(v)s.end=v},lramp:()=>s.ramp=+v,lsim:()=>simMin=+v,lsch:()=>s.on=e.target.checked};
+  if(!map[id])return;map[id]();if(id!=="lsim")saveCfg();lightPanelRefresh();
+}
+
+/* ================= tetris (slow, e-ink friendly) ================= */
+const TP={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
+const TK=Object.keys(TP),TG=[70,120,160,95,135,45,175];
+let T=null,tc=null,tn=null;
+const tRandom=()=>TK[Math.floor(Math.random()*TK.length)];
+function tNew(){
+  T={b:Array.from({length:20},()=>Array(10).fill(0)),score:0,lines:0,level:0,over:false,paused:false,hi:LS.get("kobo-tetris-hi",0),next:tRandom(),timer:null};
+  tSpawn();tStart();
+}
+function tSpeed(){return Math.max(160,900-T.level*70)}
+function tStart(){tStop();if(T&&!T.over&&!T.paused)T.timer=setInterval(()=>tAct("tick"),tSpeed())}
+function tStop(){if(T&&T.timer){clearInterval(T.timer);T.timer=null}}
+function tSpawn(){
+  const t=T.next;T.next=tRandom();const m=TP[t].map(r=>r.slice());
+  T.p={t,m,x:Math.floor((10-m[0].length)/2),y:0};
+  if(tHit(T.p.m,T.p.x,T.p.y)){T.over=true;tStop();if(T.score>T.hi){T.hi=T.score;LS.set("kobo-tetris-hi",T.hi)}}
+}
+function tHit(m,x,y){for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++)if(m[r][c]){const X=x+c,Y=y+r;if(X<0||X>=10||Y>=20||(Y>=0&&T.b[Y][X]))return true}return false}
+const tRotM=m=>m[0].map((_,c)=>m.map(r=>r[c]).reverse());
+function tLock(){
+  const p=T.p,idx=TK.indexOf(p.t)+1;
+  p.m.forEach((row,r)=>row.forEach((v,c)=>{if(v&&p.y+r>=0)T.b[p.y+r][p.x+c]=idx}));
+  let n=0;for(let r=19;r>=0;r--){if(T.b[r].every(v=>v)){T.b.splice(r,1);T.b.unshift(Array(10).fill(0));n++;r++}}
+  if(n){T.lines+=n;T.score+=[0,40,100,300,1200][n]*(T.level+1);const lv=Math.floor(T.lines/10);if(lv!==T.level){T.level=lv;tStart()}}
+  T.score+=2;tSpawn();
+}
+function tAct(a){
+  if(!T)return;
+  if(a==="new"){tNew();tDraw();return}
+  if(a==="pause"){if(!T.over){T.paused=!T.paused;T.paused?tStop():tStart();tDraw()}return}
+  if(T.over||T.paused){if(T.paused&&a!=="tick"){T.paused=false;tStart();tDraw()}return}
+  const p=T.p;
+  if(a==="left"&&!tHit(p.m,p.x-1,p.y))p.x--;
+  else if(a==="right"&&!tHit(p.m,p.x+1,p.y))p.x++;
+  else if(a==="rot"){const r=tRotM(p.m);for(const k of [0,-1,1,-2,2])if(!tHit(r,p.x+k,p.y)){p.m=r;p.x+=k;break}}
+  else if(a==="down"||a==="tick"){if(!tHit(p.m,p.x,p.y+1)){p.y++;if(a==="down")T.score++}else tLock()}
+  else if(a==="drop"){while(!tHit(p.m,p.x,p.y+1)){p.y++;T.score+=2}tLock()}
+  tDraw();
+}
+function tDraw(){
+  if(!tc||!document.body.contains(tc))return;
+  const x=tc.getContext("2d"),C=28,cs=getComputedStyle($("#screen")),paper=cs.getPropertyValue("--paper").trim()||"#ebe9e1",ink=cs.getPropertyValue("--ink").trim()||"#111";
+  const cell=(g,X,Y,S,i)=>{const gr=TG[i-1];x.fillStyle=`rgb(${gr},${gr},${gr})`;x.fillRect(X*S+1,Y*S+1,S-2,S-2);x.strokeStyle=ink;x.lineWidth=2;x.strokeRect(X*S+2,Y*S+2,S-4,S-4)};
+  x.fillStyle=paper;x.fillRect(0,0,280,560);
+  x.strokeStyle="rgba(128,128,128,.25)";x.lineWidth=1;for(let i=1;i<10;i++){x.beginPath();x.moveTo(i*C,0);x.lineTo(i*C,560);x.stroke()}for(let i=1;i<20;i++){x.beginPath();x.moveTo(0,i*C);x.lineTo(280,i*C);x.stroke()}
+  T.b.forEach((row,r)=>row.forEach((v,c)=>{if(v)cell(0,c,r,C,v)}));
+  if(!T.over){const p=T.p;let gy=p.y;while(!tHit(p.m,p.x,gy+1))gy++;
+    x.strokeStyle=ink;x.setLineDash([4,4]);x.lineWidth=2;p.m.forEach((row,r)=>row.forEach((v,c)=>{if(v)x.strokeRect((p.x+c)*C+4,(gy+r)*C+4,C-8,C-8)}));x.setLineDash([]);
+    p.m.forEach((row,r)=>row.forEach((v,c)=>{if(v&&p.y+r>=0)cell(0,p.x+c,p.y+r,C,TK.indexOf(p.t)+1)}))}
+  if(T.over||T.paused){x.fillStyle="rgba(128,128,128,.55)";x.fillRect(0,200,280,150);x.fillStyle=ink;x.font="700 30px system-ui";x.textAlign="center";x.fillText(T.over?"Game over":"Paused",140,255);x.font="600 15px system-ui";x.fillText(T.over?"Score "+T.score+" · tap New":"Tap any control to resume",140,290)}
+  if(tn&&document.body.contains(tn)){const y=tn.getContext("2d");y.fillStyle=paper;y.fillRect(0,0,112,112);const m=TP[T.next],S=24,ox=(112-m[0].length*S)/2,oy=(112-m.length*S)/2;
+    m.forEach((row,r)=>row.forEach((v,c)=>{if(v){const g=TG[TK.indexOf(T.next)];y.fillStyle=`rgb(${g},${g},${g})`;y.fillRect(ox+c*S+1,oy+r*S+1,S-2,S-2);y.strokeStyle=ink;y.lineWidth=2;y.strokeRect(ox+c*S+2,oy+r*S+2,S-4,S-4)}}))}
+  const st=$("#tstats");if(st)st.innerHTML=`Score<br><b style="font-size:22px">${T.score}</b><br>Lines <b>${T.lines}</b><br>Level <b>${T.level+1}</b><br>Best <b>${Math.max(T.hi,T.score)}</b>`;
+}
+function tetris(m){
+  m.innerHTML=`<div class="pad" style="background:var(--paper);display:flex;flex-direction:column;align-items:center;gap:8px">
+   <div style="display:flex;gap:14px"><canvas id="tc" width="280" height="560" style="border:3px solid var(--line);cursor:pointer"></canvas>
+    <div style="width:150px;font:600 15px system-ui;line-height:1.5"><div>Next</div><canvas id="tn" width="112" height="112" style="border:2px solid var(--line)"></canvas><div id="tstats" style="margin-top:8px"></div>
+    <small class="n" style="display:block;margin-top:8px">Slow, e-ink-friendly speed (partial refresh). Tap the board: left / right / rotate. Page buttons: ◀ rotate, ▶ drop.</small></div></div>
+   <div class="row" style="justify-content:center;margin:0">${[["left","◀"],["rot","⟳"],["right","▶"],["down","▼"],["drop","⤓"],["pause","Pause"],["new","New"]].map(([a,l])=>`<button class="btn tbtn" data-t="${a}">${l}</button>`).join("")}</div></div>`;
+  tc=$("#tc");tn=$("#tn");
+  tc.onclick=e=>{const r=tc.getBoundingClientRect(),f=(e.clientX-r.left)/r.width;tAct(f<.33?"left":f>.66?"right":"rot")};
+  if(!T)tNew();else if(!T.over)T.paused=true;
+  tDraw();
+}
+
+/* ================= main render ================= */
+let screen="home";
+const SCREENS={home,library,reader,calendar,sudoku,tetris,telegram,settings};
+function tick(){$("#stime").textContent=hm(new Date())}
+function render(){
+  applyTheme();
+  document.body.classList.toggle("clear",screen==="reader"&&!!(cfg.reader&&cfg.reader.clear));
+  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${screen===k?'on':''}" data-go="${k}">${svgi(k)}${l}</button>`).join("");
+  if(screen!=="tetris")tStop();
+  SCREENS[screen]($("#main"));applyBg();tick();applyLight();
+}
+setInterval(()=>{tick();applyLight();if(screen==="home")render()},30000);
+
+/* ================= events ================= */
+document.addEventListener("click",e=>{
+  const T=e.target,q=s=>T.closest(s);
+  let x;
+  if(q("#modal"))return;
+  if(x=q("[data-go]")){const k=x.dataset.go;if(k==="sleep"){sleep();return}if(SCREENS[k]){screen=k;if(k!=="telegram")tgOpen=null;render()}return}
+  if(x=q("[data-book]")){const b=books.find(b=>b.id===x.dataset.book);if(L.select){L.sel.has(b.id)?L.sel.delete(b.id):L.sel.add(b.id);render()}else{current=b;screen="reader";render()}return}
+  if(x=q("[data-lv]")){L.view=x.dataset.lv;render();return}
+  if(x=q("[data-dir]")){L.dir=x.dataset.dir;render();return}
+  if(x=q("[data-lvl]")){SD.level=+x.dataset.lvl;LS.set("kobo-sd2",SD);S=null;render();return}
+  if(x=q("[data-c]")){S.sel=+x.dataset.c;render();return}
+  if(x=q("[data-n]")){sdPlace(+x.dataset.n);return}
+  if(x=q("[data-col]")){cfg.home.columns=+x.dataset.col;saveCfg();render();return}
+  if(x=q("[data-bgm]")){cfg.home.background={...cfg.home.background,mode:"none"};saveCfg();render();return}
+  if(x=q("[data-bga]")){cfg.home.background={...cfg.home.background,mode:"art",art:+x.dataset.bga};saveCfg();render();return}
+  if(x=q("[data-chat]")){tgOpen=+x.dataset.chat;render();return}
+  if(x=q("[data-t]")){tAct(x.dataset.t);return}
+  const id=T.id||(q("button")||{}).id;
+  switch(id){
+    case"lselect":L.select=!L.select;L.sel.clear();render();break;
+    case"lall":{const vb=visibleBooks();vb.every(b=>L.sel.has(b.id))?L.sel.clear():vb.forEach(b=>L.sel.add(b.id));render();break}
+    case"linv":visibleBooks().forEach(b=>L.sel.has(b.id)?L.sel.delete(b.id):L.sel.add(b.id));render();break;
+    case"lren":case"ldel":case"lmov":case"linf":libAction(id);break;
+    case"sunbtn":openLight();break;
+    case"lsimoff":simMin=null;applyLight();lightPanelRefresh();break;
+    case"rclear":cfg.reader=cfg.reader||{};cfg.reader.clear=true;saveCfg();render();break;
+    case"fm":cfg.theme.fontSize=Math.max(12,cfg.theme.fontSize-2);saveCfg();render();break;
+    case"fp":cfg.theme.fontSize=Math.min(34,cfg.theme.fontSize+2);saveCfg();render();break;
+    case"sprev":SD.idx[SD.level]--;S=null;LS.set("kobo-sd2",SD);render();break;
+    case"snext":SD.idx[SD.level]++;S=null;LS.set("kobo-sd2",SD);render();break;
+    case"srand":SD.idx[SD.level]=Math.floor(Math.random()*puzzleList(SD.level).length);S=null;LS.set("kobo-sd2",SD);render();break;
+    case"spen":S.pencil=!S.pencil;render();break;
+    case"sera":sdPlace(0);break;
+    case"sund":if(S.hist.length){const h=S.hist.pop();S.board=h.b;S.notes=h.n;persistGame();render()}break;
+    case"shint":if(S.sel>=0&&S.puz[S.sel]==="0"){sdPush();S.board[S.sel]=+S.sol[S.sel];S.notes[S.sel]=0;persistGame();render()}break;
+    case"schk":S.check=true;render();break;
+    case"srst":S.board=S.puz.split("").map(Number);S.notes=Array(81).fill(0);S.hist=[];S.check=false;persistGame();render();break;
+    case"tgback":tgOpen=null;render();break;
+    case"tgsend":tgSend();break;
+    case"inv":cfg.theme.invert=!cfg.theme.invert;saveCfg();render();break;
+    case"sleep":sleep();break;
+    case"reset":cfg=clone(DEFAULT);saveCfg();render();break;
+    case"apply":try{const n=JSON.parse($("#json").value);if(!n.theme||!n.home||!Array.isArray(n.home.widgets)||!Array.isArray(n.home.apps))throw Error("needs theme, home.widgets[], home.apps[]");cfg=n;saveCfg();screen="home";render()}catch(er){$("#err").textContent="Config error: "+er.message}break;
+  }
+});
+document.addEventListener("input",e=>{lightInput(e);
+  if(e.target.id==="lq"){L.q=e.target.value;const p=e.target.selectionStart;render();const i=$("#lq");i.focus();i.setSelectionRange(p,p)}
+  if(e.target.id==="veil"){cfg.home.background.veil=+e.target.value;saveCfg();applyBg()}
+});
+document.addEventListener("change",e=>{
+  const t=e.target;lightInput(e);
+  if(t.id==="fsel"){cfg.theme.font=t.value;saveCfg();render()}
+  if(t.id==="lsort"){L.sort=t.value;render()}
+  if(t.id==="sauto"){S.auto=t.checked}
+  if(t.id==="img"&&t.files[0])readImage(t.files[0],u=>{saverImage=u;sleep()});
+  if(t.id==="bgfile"&&t.files[0])readImage(t.files[0],u=>{bgImage=u;LS.set("kobo-bgimg",u);cfg.home.background={...cfg.home.background,mode:"image"};saveCfg();render()});
+});
+document.addEventListener("keydown",e=>{
+  if(e.target.id==="tgin"&&e.key==="Enter"){tgSend();return}
+  if(["TEXTAREA","INPUT","SELECT"].includes(e.target.tagName))return;
+  if(screen==="tetris"&&T){const k={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"rot",ArrowDown:"down"," ":"drop",p:"pause",P:"pause"}[e.key];if(k){e.preventDefault();tAct(k)}return}
+  if(screen==="sudoku"&&S){if(/^[0-9]$/.test(e.key)){sdPlace(+e.key);return}
+    const mv={ArrowUp:-9,ArrowDown:9,ArrowLeft:-1,ArrowRight:1}[e.key];if(mv&&S.sel>=0){S.sel=Math.max(0,Math.min(80,S.sel+mv));render();return}}
+  if(e.key==="ArrowLeft")turn(-1);if(e.key==="ArrowRight"||e.key===" ")turn(1);
+});
+function turn(d){
+  if($("#saver").style.display==="block"){$("#saver").style.display="none";return}
+  if(screen==="tetris"&&T){tAct(d<0?"rot":"drop");return}
+  if(screen==="reader"){rpage=Math.max(0,Math.min(rpages-1,rpage+d));showPage()}
+}
+$("#bprev").onclick=()=>turn(-1);$("#bnext").onclick=()=>turn(1);
+function fit(){const w=$("#device").offsetWidth,h=$("#device").offsetHeight,s=Math.min((innerWidth-40)/(w+16),(innerHeight-50)/h,1);const wr=$("#wrap");wr.style.transformOrigin="top left";wr.style.transform=`scale(${s})`;wr.style.height=h*s+"px";wr.style.width=(w+16)*s+"px"}
+addEventListener("resize",fit);
+render();fit();
+</script>
+</body>
+</html>
