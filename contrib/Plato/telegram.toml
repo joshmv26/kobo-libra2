@@ -1,0 +1,4 @@
+# Telegram settings. Get api_id and api_hash at https://my.telegram.org (API development tools).
+api_id = 0
+api_hash = ""
+download_dir = "/mnt/onboard/Telegram"

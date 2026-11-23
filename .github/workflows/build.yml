@@ -47,6 +47,12 @@ jobs:
       - name: Build + dist
         run: ./dist.sh
 
+      - name: Build Telegram helper
+        run: |
+          cargo build --release --target=arm-unknown-linux-gnueabihf -p plato-tg
+          cp target/arm-unknown-linux-gnueabihf/release/plato-tg dist/
+          arm-linux-gnueabihf-strip dist/plato-tg
+
       - name: Bundle with NickelMenu
         env:
           GH_TOKEN: ${{ github.token }}

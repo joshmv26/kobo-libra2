@@ -169,6 +169,7 @@ impl Launcher {
             let hdr = rect![r.min.x + m, r.min.y + m, r.min.x + m + w / 4, r.min.y + m + h / 14];
             self.buttons.push((Btn { rect: hdr, label: "< Home".to_string(), on: false }, Action::BackToHome));
             let items: Vec<(&str, Action)> = vec![
+                ("Telegram", Action::Launch(AppCmd::Telegram)),
                 ("Sudoku", Action::Launch(AppCmd::Sudoku)),
                 ("Tetris", Action::Launch(AppCmd::Tetris)),
                 ("Dictionary", Action::Launch(AppCmd::Dictionary { query: String::new(), language: String::new() })),

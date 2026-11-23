@@ -25,6 +25,7 @@ mv KoboRoot.tgz .kobo/KoboRoot.tgz
 mv ../dist .adds/plato
 cp ../contrib/NickelMenu/* .adds/nm/
 cp ../contrib/Plato/home.toml .adds/plato/home.toml
+cp ../contrib/Plato/telegram.toml .adds/plato/telegram.toml
 tar -xzOf .kobo/KoboRoot.tgz ./mnt/onboard/.adds/nm/doc > .adds/nm/doc 2>/dev/null || true
 
 FIRMWARE_VERSION=$(basename "$FIRMWARE_ARCHIVE" .zip)

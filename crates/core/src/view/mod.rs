@@ -42,6 +42,7 @@ pub mod calculator;
 pub mod sketch;
 pub mod games;
 pub mod launcher;
+pub mod telegram;
 pub mod touch_events;
 pub mod rotation_values;
 
@@ -348,6 +349,7 @@ pub enum Event {
     ClockTick,
     GameTick,
     CalendarSynced,
+    TgLine(String),
     BatteryTick,
     ToggleFrontlight,
     Load(PathBuf),
@@ -377,6 +379,7 @@ pub enum AppCmd {
     Sudoku,
     Tetris,
     Launcher,
+    Telegram,
     Dictionary {
         query: String,
         language: String,

@@ -81,6 +81,8 @@ pub fn toggle_main_menu(view: &mut dyn View, rect: Rectangle, enable: Option<boo
 
         let apps = vec![EntryKind::Command("Home screen".to_string(),
                                            EntryId::Launch(AppCmd::Launcher)),
+                        EntryKind::Command("Telegram".to_string(),
+                                           EntryId::Launch(AppCmd::Telegram)),
                         EntryKind::Command("Dictionary".to_string(),
                                            EntryId::Launch(AppCmd::Dictionary { query: "".to_string(), language: "".to_string() })),
                         EntryKind::Command("Calculator".to_string(),
