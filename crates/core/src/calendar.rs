@@ -72,7 +72,7 @@ fn parse(text: &str) -> Vec<Raw> {
         let (name, params) = name_params.split_once(';').unwrap_or((name_params, ""));
         match name {
             "DTSTART" => if let Some((d, a)) = parse_dt(params, value) { r.start = d; r.all_day = a; },
-            "SUMMARY" => r.title = value.replace("\\,", ",").replace("\\n", " ").replace("\;", ";"),
+            "SUMMARY" => r.title = value.replace("\\,", ",").replace("\\n", " ").replace("\\;", ";"),
             "RRULE" => {
                 for part in value.split(';') {
                     if let Some((k, v)) = part.split_once('=') {
