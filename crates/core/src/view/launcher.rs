@@ -4,6 +4,10 @@ use crate::context::Context;
 use crate::font::Fonts;
 use crate::framebuffer::{Framebuffer, UpdateMode};
 use crate::geom::Rectangle;
+use crate::framebuffer::Pixmap;
+use crate::metadata::Info;
+use std::path::PathBuf;
+use chrono::Local;
 use crate::gesture::GestureEvent;
 use crate::view::{View, Event, Hub, Bus, RenderQueue, RenderData, Id, ID_FEEDER, ViewId, EntryId, AppCmd};
 use crate::view::games::{Btn, split_row, draw_text, draw_btn};
@@ -25,15 +29,43 @@ pub struct Launcher {
     apps_mode: bool,
     buttons: Vec<(Btn, Action)>,
     px: i32,
+    book: Option<Info>,
+    cover: Option<Pixmap>,
+    card: Rectangle,
 }
 
 impl Launcher {
     pub fn new(rect: Rectangle, rq: &mut RenderQueue, _context: &mut Context) -> Launcher {
         let id = ID_FEEDER.next();
-        let mut l = Launcher { id, rect, children: Vec::new(), apps_mode: false, buttons: Vec::new(), px: 40 };
+        let mut l = Launcher { id, rect, children: Vec::new(), apps_mode: false, buttons: Vec::new(), px: 40,
+                               book: None, cover: None, card: rect![0, 0, 0, 0] };
+        l.load_book(_context);
         l.layout();
         rq.add(RenderData::new(id, rect, UpdateMode::Full));
         l
+    }
+
+    fn load_book(&mut self, context: &mut Context) {
+        let home = context.library.home.clone();
+        let (files, _) = context.library.list(&home, None, false);
+        let mut best: Option<Info> = None;
+        for info in files {
+            if let Some(r) = info.reader.as_ref() {
+                if r.finished { continue; }
+                let newer = match best.as_ref().and_then(|b| b.reader.as_ref()) {
+                    Some(br) => r.opened > br.opened,
+                    None => true,
+                };
+                if newer { best = Some(info); }
+            }
+        }
+        if let Some(info) = best.as_ref() {
+            let tp: PathBuf = context.library.thumbnail_preview(&info.file.path);
+            if let Ok(pm) = Pixmap::from_png(&tp) {
+                self.cover = Some(pm);
+            }
+        }
+        self.book = best;
     }
 
     fn layout(&mut self) {
@@ -44,10 +76,13 @@ impl Launcher {
         self.px = px;
         self.buttons.clear();
         if !self.apps_mode {
-            let top = h / 5;
+            let top = h / 6;
             let gap = m;
-            let bh = (h - top - m * 2 - gap) / 2;
-            let lib = rect![r.min.x + m, r.min.y + top, r.max.x - m, r.min.y + top + bh];
+            let card_h = h / 5;
+            self.card = rect![r.min.x + m, r.min.y + top, r.max.x - m, r.min.y + top + card_h];
+            let by = self.card.max.y + gap;
+            let bh = (r.max.y - m - by - gap) / 2;
+            let lib = rect![r.min.x + m, by, r.max.x - m, by + bh];
             let apps = rect![r.min.x + m, lib.max.y + gap, r.max.x - m, lib.max.y + gap + bh];
             self.buttons.push((Btn { rect: lib, label: "Library".to_string(), on: false }, Action::Library));
             self.buttons.push((Btn { rect: apps, label: "Apps".to_string(), on: false }, Action::Apps));
@@ -87,6 +122,12 @@ impl View for Launcher {
         match *evt {
             Event::Gesture(GestureEvent::Tap(pt)) if self.rect.includes(pt) => {
                 let hit = self.buttons.iter().find(|(b, _)| b.rect.includes(pt)).map(|(_, a)| a.clone());
+                if !self.apps_mode && hit.is_none() && self.card.includes(pt) {
+                    if let Some(info) = self.book.clone() {
+                        hub.send(Event::Open(Box::new(info))).ok();
+                    }
+                    return true;
+                }
                 match hit {
                     Some(Action::Library) => { hub.send(Event::Back).ok(); },
                     Some(Action::Apps) => {
@@ -117,8 +158,57 @@ impl View for Launcher {
             draw_btn(fb, fonts, b, big);
         }
         if !self.apps_mode {
-            let title = rect![self.rect.min.x, self.rect.min.y, self.rect.max.x, self.rect.min.y + self.rect.height() as i32 / 5];
-            draw_text(fb, fonts, "Home", self.px * 2, BLACK, &title);
+            let r = self.rect;
+            let top = rect![r.min.x, r.min.y, r.max.x, r.min.y + r.height() as i32 / 6];
+            let now = Local::now();
+            let head = rect![top.min.x, top.min.y, top.max.x, top.min.y + top.height() as i32 / 2];
+            let sub = rect![top.min.x, head.max.y, top.max.x, top.max.y];
+            draw_text(fb, fonts, &now.format("%H:%M").to_string(), self.px * 2, BLACK, &head);
+            draw_text(fb, fonts, &now.format("%A, %-d %B").to_string(), self.px * 3 / 4, BLACK, &sub);
+            // Continue reading card.
+            let c = self.card;
+            fb.draw_rectangle(&c, BLACK);
+            fb.draw_rectangle(&rect![c.min.x + 3, c.min.y + 3, c.max.x - 3, c.max.y - 3], WHITE);
+            let pad = (c.height() as i32) / 10;
+            let cw = (c.height() as i32 - 2 * pad) * 2 / 3;
+            let cover_r = rect![c.min.x + pad, c.min.y + pad, c.min.x + pad + cw, c.max.y - pad];
+            fb.draw_rectangle(&cover_r, BLACK);
+            fb.draw_rectangle(&rect![cover_r.min.x + 2, cover_r.min.y + 2, cover_r.max.x - 2, cover_r.max.y - 2], WHITE);
+            if let Some(pm) = self.cover.as_ref() {
+                let (tw, th) = (cover_r.width() as i32 - 4, cover_r.height() as i32 - 4);
+                let mut out = Pixmap::new(tw as u32, th as u32, pm.samples);
+                for y in 0..th as u32 {
+                    for x in 0..tw as u32 {
+                        let sx = (x as u64 * pm.width as u64 / tw as u64) as u32;
+                        let sy = (y as u64 * pm.height as u64 / th as u64) as u32;
+                        for k in 0..pm.samples {
+                            out.data[pm.samples * (y * out.width + x) as usize + k] = pm.data[pm.samples * (sy * pm.width + sx) as usize + k];
+                        }
+                    }
+                }
+                fb.draw_pixmap(&out, pt!(cover_r.min.x + 2, cover_r.min.y + 2));
+            }
+            let tx0 = cover_r.max.x + pad;
+            let lh = c.height() as i32 / 4;
+            let l1 = rect![tx0, c.min.y + pad, c.max.x - pad, c.min.y + pad + lh];
+            draw_left(fb, fonts, "Continue reading", self.px * 3 / 4, &l1);
+            if let Some(info) = self.book.as_ref() {
+                let title: String = info.title.chars().take(34).collect();
+                let l2 = rect![tx0, l1.max.y, c.max.x - pad, l1.max.y + lh];
+                draw_left(fb, fonts, &title, self.px, &l2);
+                let pct = info.reader.as_ref().map(|r| 100 * (r.current_page + 1) / r.pages_count.max(1)).unwrap_or(0);
+                let l3 = rect![tx0, l2.max.y, c.max.x - pad, l2.max.y + lh];
+                let author: String = info.author.chars().take(26).collect();
+                draw_left(fb, fonts, &format!("{} - {}%", author, pct), self.px * 3 / 4, &l3);
+                let bar = rect![tx0, l3.max.y + lh / 4, c.max.x - pad, l3.max.y + lh / 4 + lh / 5];
+                fb.draw_rectangle(&bar, BLACK);
+                fb.draw_rectangle(&rect![bar.min.x + 2, bar.min.y + 2, bar.max.x - 2, bar.max.y - 2], WHITE);
+                let fillw = (bar.width() as i32 - 4) * pct as i32 / 100;
+                fb.draw_rectangle(&rect![bar.min.x + 2, bar.min.y + 2, bar.min.x + 2 + fillw, bar.max.y - 2], BLACK);
+            } else {
+                let l2 = rect![tx0, l1.max.y, c.max.x - pad, l1.max.y + lh];
+                draw_left(fb, fonts, "No book open yet", self.px, &l2);
+            }
         }
     }
 
@@ -138,4 +228,17 @@ impl View for Launcher {
     fn children(&self) -> &Vec<Box<dyn View>> { &self.children }
     fn children_mut(&mut self) -> &mut Vec<Box<dyn View>> { &mut self.children }
     fn id(&self) -> Id { self.id }
+}
+
+fn draw_left(fb: &mut dyn Framebuffer, fonts: &mut Fonts, text: &str, px: i32, rect: &Rectangle) {
+    use crate::device::CURRENT_DEVICE;
+    use crate::font::{font_from_style, NORMAL_STYLE};
+    let dpi = CURRENT_DEVICE.dpi;
+    let size = ((px as f32) * 72.0 / dpi as f32 * 64.0).max(64.0) as u32;
+    let style = NORMAL_STYLE.with_size(size);
+    let font = font_from_style(fonts, &style, dpi);
+    let plan = font.plan(text, Some(rect.width() as i32), None);
+    let xh = font.x_heights.0 as i32;
+    let y = rect.min.y + (rect.height() as i32 + xh * 7 / 5) / 2;
+    font.render(fb, BLACK, &plan, pt!(rect.min.x, y));
 }
