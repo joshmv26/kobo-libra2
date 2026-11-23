@@ -41,6 +41,7 @@ pub mod dictionary;
 pub mod calculator;
 pub mod sketch;
 pub mod games;
+pub mod launcher;
 pub mod touch_events;
 pub mod rotation_values;
 
@@ -374,6 +375,7 @@ pub enum AppCmd {
     Calculator,
     Sudoku,
     Tetris,
+    Launcher,
     Dictionary {
         query: String,
         language: String,

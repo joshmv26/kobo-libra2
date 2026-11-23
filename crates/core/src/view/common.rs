@@ -79,7 +79,9 @@ pub fn toggle_main_menu(view: &mut dyn View, rect: Rectangle, enable: Option<boo
                                    n == rotation)
         ).collect::<Vec<EntryKind>>();
 
-        let apps = vec![EntryKind::Command("Dictionary".to_string(),
+        let apps = vec![EntryKind::Command("Home screen".to_string(),
+                                           EntryId::Launch(AppCmd::Launcher)),
+                        EntryKind::Command("Dictionary".to_string(),
                                            EntryId::Launch(AppCmd::Dictionary { query: "".to_string(), language: "".to_string() })),
                         EntryKind::Command("Calculator".to_string(),
                                            EntryId::Launch(AppCmd::Calculator)),

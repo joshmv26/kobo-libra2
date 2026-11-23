@@ -113,6 +113,7 @@ pub struct Tetris {
     best: u32,
     over: bool,
     paused: bool,
+    ticks: u32,
     rng: Rng,
     running: Arc<AtomicBool>,
     interval: Arc<AtomicU64>,
@@ -120,7 +121,7 @@ pub struct Tetris {
 
 fn speed_ms(level: u32) -> u64 {
     // Slow on purpose: e-ink needs time to refresh.
-    (1100u64).saturating_sub(level as u64 * 80).max(300)
+    (1100u64).saturating_sub(level as u64 * 80).max(700)
 }
 
 impl Tetris {
@@ -160,6 +161,7 @@ impl Tetris {
             best: 0,
             over: false,
             paused: false,
+            ticks: 0,
             rng,
             running,
             interval,
@@ -331,13 +333,18 @@ impl View for Tetris {
             Event::GameTick => {
                 if !self.paused && !self.over {
                     self.step_down(false);
-                    rq.add(RenderData::new(self.id, self.play_rect(), UpdateMode::Fast));
+                    self.ticks += 1;
+                    // Partial refresh is cleaner than Fast; clear ghosting with a full flash now and then.
+                    let mode = if self.ticks % 10 == 0 { UpdateMode::Full } else { UpdateMode::Partial };
+                    rq.add(RenderData::new(self.id, self.rect, mode));
                 }
                 true
             },
             Event::Gesture(GestureEvent::Tap(pt)) if self.rect.includes(pt) => {
                 if self.tap(pt, hub) {
-                    rq.add(RenderData::new(self.id, self.rect, UpdateMode::Gui));
+                    self.ticks += 1;
+                    let mode = if self.ticks % 10 == 0 { UpdateMode::Full } else { UpdateMode::Partial };
+                    rq.add(RenderData::new(self.id, self.rect, mode));
                 }
                 true
             },
