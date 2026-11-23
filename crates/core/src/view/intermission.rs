@@ -27,7 +27,19 @@ pub enum Message {
 impl Intermission {
     pub fn new(rect: Rectangle, kind: IntermKind, context: &Context) -> Intermission {
         let path = &context.settings.intermissions[kind];
-        let message = match path.to_str() {
+        // A folder of pictures (e.g. /mnt/onboard/Screensaver) gives a random screensaver.
+        let folder = if kind == IntermKind::PowerOff { None } else {
+            let cand = if path.is_dir() { path.clone() } else if path.to_str() == Some(LOGO_SPECIAL_PATH) { context.library.home.join("Screensaver") } else { PathBuf::new() };
+            if cand.is_dir() {
+                let imgs: Vec<PathBuf> = std::fs::read_dir(&cand).map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.path())
+                    .filter(|p| p.extension().and_then(|x| x.to_str()).map(|x| matches!(x.to_lowercase().as_str(), "png" | "jpg" | "jpeg")).unwrap_or(false)).collect()).unwrap_or_default();
+                if imgs.is_empty() { None } else {
+                    let n = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos() as usize).unwrap_or(0);
+                    Some(imgs[(n / 7) % imgs.len()].clone())
+                }
+            } else { None }
+        };
+        let message = if let Some(img) = folder { Message::Image(img) } else { match path.to_str() {
             Some(LOGO_SPECIAL_PATH) => Message::Text(kind.text().to_string()),
             Some(COVER_SPECIAL_PATH) => {
                 let query = BookQuery {
@@ -43,7 +55,7 @@ impl Intermission {
                 }
             },
             _ => Message::Image(path.clone()),
-        };
+        } };
         Intermission {
             id: ID_FEEDER.next(),
             rect,

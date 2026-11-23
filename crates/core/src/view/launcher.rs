@@ -12,6 +12,41 @@ use crate::gesture::GestureEvent;
 use crate::view::{View, Event, Hub, Bus, RenderQueue, RenderData, Id, ID_FEEDER, ViewId, EntryId, AppCmd};
 use crate::view::games::{Btn, split_row, draw_text, draw_btn};
 
+#[derive(serde::Deserialize, Clone)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct HomeConfig {
+    pub greeting: String,
+    pub background: String,
+    pub show_clock: bool,
+    pub show_book: bool,
+}
+
+impl Default for HomeConfig {
+    fn default() -> HomeConfig {
+        HomeConfig { greeting: "Hello, Josh".to_string(), background: "home-bg.png".to_string(), show_clock: true, show_book: true }
+    }
+}
+
+fn load_config() -> HomeConfig {
+    std::fs::read_to_string("home.toml").ok()
+        .and_then(|t| toml::from_str(&t).ok())
+        .unwrap_or_default()
+}
+
+fn scale_to(pm: &Pixmap, w: u32, h: u32) -> Pixmap {
+    let mut out = Pixmap::new(w, h, pm.samples);
+    for y in 0..h {
+        for x in 0..w {
+            let sx = (x as u64 * pm.width as u64 / w as u64) as u32;
+            let sy = (y as u64 * pm.height as u64 / h as u64) as u32;
+            for k in 0..pm.samples {
+                out.data[pm.samples * (y * w + x) as usize + k] = pm.data[pm.samples * (sy * pm.width + sx) as usize + k];
+            }
+        }
+    }
+    out
+}
+
 #[derive(Clone)]
 enum Action {
     Library,
@@ -32,17 +67,29 @@ pub struct Launcher {
     book: Option<Info>,
     cover: Option<Pixmap>,
     card: Rectangle,
+    cfg: HomeConfig,
+    bg: Option<Pixmap>,
 }
 
 impl Launcher {
     pub fn new(rect: Rectangle, rq: &mut RenderQueue, _context: &mut Context) -> Launcher {
         let id = ID_FEEDER.next();
         let mut l = Launcher { id, rect, children: Vec::new(), apps_mode: false, buttons: Vec::new(), px: 40,
-                               book: None, cover: None, card: rect![0, 0, 0, 0] };
+                               book: None, cover: None, card: rect![0, 0, 0, 0],
+                               cfg: load_config(), bg: None };
+        l.load_bg();
         l.load_book(_context);
         l.layout();
         rq.add(RenderData::new(id, rect, UpdateMode::Full));
         l
+    }
+
+    fn load_bg(&mut self) {
+        self.bg = None;
+        if self.cfg.background.is_empty() { return; }
+        if let Ok(pm) = Pixmap::from_png(&self.cfg.background) {
+            self.bg = Some(scale_to(&pm, self.rect.width(), self.rect.height()));
+        }
     }
 
     fn load_book(&mut self, context: &mut Context) {
@@ -122,7 +169,7 @@ impl View for Launcher {
         match *evt {
             Event::Gesture(GestureEvent::Tap(pt)) if self.rect.includes(pt) => {
                 let hit = self.buttons.iter().find(|(b, _)| b.rect.includes(pt)).map(|(_, a)| a.clone());
-                if !self.apps_mode && hit.is_none() && self.card.includes(pt) {
+                if !self.apps_mode && hit.is_none() && self.cfg.show_book && self.card.includes(pt) {
                     if let Some(info) = self.book.clone() {
                         hub.send(Event::Open(Box::new(info))).ok();
                     }
@@ -153,6 +200,9 @@ impl View for Launcher {
 
     fn render(&self, fb: &mut dyn Framebuffer, _rect: Rectangle, fonts: &mut Fonts) {
         fb.draw_rectangle(&self.rect, WHITE);
+        if let Some(bg) = self.bg.as_ref() {
+            fb.draw_pixmap(bg, self.rect.min);
+        }
         let big = if self.apps_mode { self.px } else { self.px * 2 };
         for (b, _) in &self.buttons {
             draw_btn(fb, fonts, b, big);
@@ -161,11 +211,21 @@ impl View for Launcher {
             let r = self.rect;
             let top = rect![r.min.x, r.min.y, r.max.x, r.min.y + r.height() as i32 / 6];
             let now = Local::now();
+            if !self.cfg.show_clock { /* keep greeting only */ }
             let head = rect![top.min.x, top.min.y, top.max.x, top.min.y + top.height() as i32 / 2];
             let sub = rect![top.min.x, head.max.y, top.max.x, top.max.y];
-            draw_text(fb, fonts, &now.format("%H:%M").to_string(), self.px * 2, BLACK, &head);
-            draw_text(fb, fonts, &now.format("%A, %-d %B").to_string(), self.px * 3 / 4, BLACK, &sub);
-            // Continue reading card.
+            let strip = |r: &Rectangle, fb: &mut dyn Framebuffer| {
+                fb.draw_rectangle(&rect![r.min.x + r.width() as i32 / 8, r.min.y, r.max.x - r.width() as i32 / 8, r.max.y], WHITE);
+            };
+            if self.bg.is_some() { strip(&head, fb); strip(&sub, fb); }
+            if self.cfg.show_clock {
+                draw_text(fb, fonts, &now.format("%H:%M").to_string(), self.px * 2, BLACK, &head);
+            } else {
+                draw_text(fb, fonts, &self.cfg.greeting, self.px * 3 / 2, BLACK, &head);
+            }
+            let line = if self.cfg.show_clock { format!("{} - {}", self.cfg.greeting, now.format("%A, %-d %B")) } else { now.format("%A, %-d %B").to_string() };
+            draw_text(fb, fonts, &line, self.px * 3 / 4, BLACK, &sub);
+            if self.cfg.show_book {
             let c = self.card;
             fb.draw_rectangle(&c, BLACK);
             fb.draw_rectangle(&rect![c.min.x + 3, c.min.y + 3, c.max.x - 3, c.max.y - 3], WHITE);
@@ -208,6 +268,7 @@ impl View for Launcher {
             } else {
                 let l2 = rect![tx0, l1.max.y, c.max.x - pad, l1.max.y + lh];
                 draw_left(fb, fonts, "No book open yet", self.px, &l2);
+            }
             }
         }
     }

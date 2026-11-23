@@ -317,6 +317,11 @@ pub fn run() -> Result<(), Error> {
         context.frontlight.set_warmth(0.0);
     }
 
+    // Folders for Telegram downloads and screensaver pictures.
+    for dir in ["Telegram", "Screensaver"] {
+        std::fs::create_dir_all(context.library.home.join(dir)).ok();
+    }
+
     let mut tasks: Vec<Task> = Vec::new();
     let mut history: Vec<HistoryItem> = Vec::new();
     let mut rq = RenderQueue::new();

@@ -1,0 +1,6 @@
+# Home screen settings. Edit and restart Plato.
+greeting = "Hello, Josh"
+# PNG image (put it in .adds/plato/). Leave "" for no background.
+background = "home-bg.png"
+show-clock = true
+show-book = true
