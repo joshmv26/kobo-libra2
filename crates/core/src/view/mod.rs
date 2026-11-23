@@ -347,6 +347,7 @@ pub enum Event {
     Finished,
     ClockTick,
     GameTick,
+    CalendarSynced,
     BatteryTick,
     ToggleFrontlight,
     Load(PathBuf),

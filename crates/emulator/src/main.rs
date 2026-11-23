@@ -442,7 +442,7 @@ fn main() -> Result<(), Error> {
                         AppCmd::Calculator => {
                             Box::new(Calculator::new(context.fb.rect(), &tx, &mut rq, &mut context)?)
                         },
-                        AppCmd::Launcher => Box::new(plato_core::view::launcher::Launcher::new(context.fb.rect(), &mut rq, &mut context)),
+                        AppCmd::Launcher => Box::new(plato_core::view::launcher::Launcher::new(context.fb.rect(), &tx, &mut rq, &mut context)),
                         AppCmd::Sudoku => Box::new(Sudoku::new(context.fb.rect(), &mut rq, &mut context)),
                         AppCmd::Tetris => Box::new(Tetris::new(context.fb.rect(), &tx, &mut rq, &mut context)),
                         AppCmd::Dictionary { ref query, ref language } => {

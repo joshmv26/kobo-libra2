@@ -830,7 +830,7 @@ pub fn run() -> Result<(), Error> {
                         Box::new(Sketch::new(context.fb.rect(), &mut rq, &mut context))
                     },
                     AppCmd::Calculator => Box::new(Calculator::new(context.fb.rect(), &tx, &mut rq, &mut context)?),
-                    AppCmd::Launcher => Box::new(Launcher::new(context.fb.rect(), &mut rq, &mut context)),
+                    AppCmd::Launcher => Box::new(Launcher::new(context.fb.rect(), &tx, &mut rq, &mut context)),
                     AppCmd::Sudoku => Box::new(Sudoku::new(context.fb.rect(), &mut rq, &mut context)),
                     AppCmd::Tetris => Box::new(Tetris::new(context.fb.rect(), &tx, &mut rq, &mut context)),
                     AppCmd::Dictionary { ref query, ref language } => Box::new(DictionaryApp::new(context.fb.rect(), query,

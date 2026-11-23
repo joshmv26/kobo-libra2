@@ -19,11 +19,12 @@ pub struct HomeConfig {
     pub background: String,
     pub show_clock: bool,
     pub show_book: bool,
+    pub calendar_url: String,
 }
 
 impl Default for HomeConfig {
     fn default() -> HomeConfig {
-        HomeConfig { greeting: "Hello, Josh".to_string(), background: "home-bg.png".to_string(), show_clock: true, show_book: true }
+        HomeConfig { greeting: "Hello, Josh".to_string(), background: "home-bg.png".to_string(), show_clock: true, show_book: true, calendar_url: String::new() }
     }
 }
 
@@ -69,19 +70,48 @@ pub struct Launcher {
     card: Rectangle,
     cfg: HomeConfig,
     bg: Option<Pixmap>,
+    agenda: Rectangle,
+    events: Vec<crate::calendar::Entry>,
+    hub: Hub,
 }
 
 impl Launcher {
-    pub fn new(rect: Rectangle, rq: &mut RenderQueue, _context: &mut Context) -> Launcher {
+    pub fn new(rect: Rectangle, hub: &Hub, rq: &mut RenderQueue, _context: &mut Context) -> Launcher {
         let id = ID_FEEDER.next();
         let mut l = Launcher { id, rect, children: Vec::new(), apps_mode: false, buttons: Vec::new(), px: 40,
                                book: None, cover: None, card: rect![0, 0, 0, 0],
-                               cfg: load_config(), bg: None };
+                               cfg: load_config(), bg: None,
+                               agenda: rect![0, 0, 0, 0], events: Vec::new(), hub: hub.clone() };
         l.load_bg();
+        l.load_events();
+        l.sync_calendar();
         l.load_book(_context);
         l.layout();
         rq.add(RenderData::new(id, rect, UpdateMode::Full));
         l
+    }
+
+    fn load_events(&mut self) {
+        self.events = match std::fs::read_to_string("calendar.ics") {
+            Ok(t) => crate::calendar::upcoming(&t, crate::calendar::today(), 14),
+            Err(_) => Vec::new(),
+        };
+    }
+
+    fn sync_calendar(&self) {
+        if self.cfg.calendar_url.is_empty() { return; }
+        let url = self.cfg.calendar_url.clone();
+        let hub = self.hub.clone();
+        std::thread::spawn(move || {
+            let ok = std::process::Command::new("curl")
+                .args(["-sSL", "-m", "25", "-o", "calendar.ics.tmp", &url]).status()
+                .map(|s| s.success()).unwrap_or(false);
+            if ok {
+                let good = std::fs::read_to_string("calendar.ics.tmp").map(|t| t.contains("BEGIN:VCALENDAR")).unwrap_or(false);
+                if good { std::fs::rename("calendar.ics.tmp", "calendar.ics").ok(); }
+            }
+            hub.send(Event::CalendarSynced).ok();
+        });
     }
 
     fn load_bg(&mut self) {
@@ -127,7 +157,9 @@ impl Launcher {
             let gap = m;
             let card_h = h / 5;
             self.card = rect![r.min.x + m, r.min.y + top, r.max.x - m, r.min.y + top + card_h];
-            let by = self.card.max.y + gap;
+            let agenda_h = if self.cfg.calendar_url.is_empty() { 0 } else { h / 5 };
+            self.agenda = rect![r.min.x + m, self.card.max.y + gap, r.max.x - m, self.card.max.y + gap + agenda_h];
+            let by = self.card.max.y + gap + if agenda_h > 0 { agenda_h + gap } else { 0 };
             let bh = (r.max.y - m - by - gap) / 2;
             let lib = rect![r.min.x + m, by, r.max.x - m, by + bh];
             let apps = rect![r.min.x + m, lib.max.y + gap, r.max.x - m, lib.max.y + gap + bh];
@@ -169,6 +201,10 @@ impl View for Launcher {
         match *evt {
             Event::Gesture(GestureEvent::Tap(pt)) if self.rect.includes(pt) => {
                 let hit = self.buttons.iter().find(|(b, _)| b.rect.includes(pt)).map(|(_, a)| a.clone());
+                if !self.apps_mode && hit.is_none() && self.agenda.height() > 0 && self.agenda.includes(pt) {
+                    self.sync_calendar();
+                    return true;
+                }
                 if !self.apps_mode && hit.is_none() && self.cfg.show_book && self.card.includes(pt) {
                     if let Some(info) = self.book.clone() {
                         hub.send(Event::Open(Box::new(info))).ok();
@@ -192,6 +228,11 @@ impl View for Launcher {
                     Some(Action::Select(e)) => { hub.send(Event::Select(e)).ok(); },
                     None => {},
                 }
+                true
+            },
+            Event::CalendarSynced => {
+                self.load_events();
+                if !self.apps_mode { rq.add(RenderData::new(self.id, self.agenda, UpdateMode::Gui)); }
                 true
             },
             _ => false,
@@ -269,6 +310,30 @@ impl View for Launcher {
                 let l2 = rect![tx0, l1.max.y, c.max.x - pad, l1.max.y + lh];
                 draw_left(fb, fonts, "No book open yet", self.px, &l2);
             }
+            }
+            if self.agenda.height() > 0 {
+                let a = self.agenda;
+                fb.draw_rectangle(&a, BLACK);
+                fb.draw_rectangle(&rect![a.min.x + 3, a.min.y + 3, a.max.x - 3, a.max.y - 3], WHITE);
+                let pad = a.height() as i32 / 12;
+                let lh = (a.height() as i32 - 2 * pad) / 5;
+                let hd = rect![a.min.x + pad, a.min.y + pad, a.max.x - pad, a.min.y + pad + lh];
+                draw_left(fb, fonts, "Agenda (tap to sync)", self.px * 3 / 4, &hd);
+                let today = crate::calendar::today();
+                if self.events.is_empty() {
+                    let l = rect![a.min.x + pad, hd.max.y, a.max.x - pad, hd.max.y + lh];
+                    draw_left(fb, fonts, "Nothing in the next 14 days", self.px * 3 / 4, &l);
+                }
+                for (i, e) in self.events.iter().take(4).enumerate() {
+                    let day = if e.start.date() == today { "Today".to_string() }
+                              else if (e.start.date() - today).num_days() == 1 { "Tomorrow".to_string() }
+                              else { e.start.format("%a %-d").to_string() };
+                    let when = if e.all_day { day } else { format!("{} {}", day, e.start.format("%H:%M")) };
+                    let title: String = e.title.chars().take(30).collect();
+                    let y = hd.max.y + lh * i as i32;
+                    let l = rect![a.min.x + pad, y, a.max.x - pad, y + lh];
+                    draw_left(fb, fonts, &format!("{}  {}", when, title), self.px * 3 / 4, &l);
+                }
             }
         }
     }

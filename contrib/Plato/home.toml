@@ -4,3 +4,5 @@ greeting = "Hello, Josh"
 background = "home-bg.png"
 show-clock = true
 show-book = true
+# Private ICS address of your Google Calendar (Settings > your calendar > Secret address in iCal format). Needs WiFi on.
+calendar-url = ""

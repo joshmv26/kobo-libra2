@@ -13,6 +13,7 @@ mod dictionary;
 pub mod document;
 pub mod library;
 pub mod view;
+pub mod calendar;
 pub mod metadata;
 pub mod rtc;
 pub mod settings;
